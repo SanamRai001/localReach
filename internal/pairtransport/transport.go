@@ -33,7 +33,7 @@ func field(s string)string{return strconv.Itoa(len(s))+":"+s}
 func decisionMessage(d Decision)[]byte{
  return []byte(decisionDomain+field(d.ID)+field(d.Tenant)+strconv.FormatBool(d.Approve)+field(d.Nonce)+field(d.KeyID)+strconv.FormatInt(d.IssuedAt,10)+":"+strconv.FormatInt(d.ExpiresAt,10))
 }
-func SignDecision(private ed25519.PrivateKey,d Decision)[]byte{
+// DecisionMessage is the canonical signed byte representation of an approval.\nfunc DecisionMessage(d Decision)[]byte{return decisionMessage(d)}\nfunc SignDecision(private ed25519.PrivateKey,d Decision)[]byte{
  return ed25519.Sign(private,decisionMessage(d))
 }
 type challenge struct{ id string; expires time.Time }
