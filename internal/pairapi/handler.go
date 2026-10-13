@@ -32,7 +32,7 @@ type Pairing interface{
  RedeemInvitation(context.Context,string,string,ed25519.PublicKey)(pgpairing.Record,error)
  ReviewRequest(context.Context,string,string)(pgpairing.Review,error)
 }
-type Handler struct{Auth Auth;Pairing Pairing;Guard *Guard}
+type Handler struct{Auth Auth;Pairing Pairing;Guard *Guard;Admission Admission}
 type proposal struct {
  Organization string `json:"organization"`
  Site string `json:"site"`
@@ -121,6 +121,7 @@ func(h Handler)ServeHTTP(w http.ResponseWriter,r *http.Request){
  if r.Header.Get("Origin")!=""||r.Header.Get("Cookie")!=""{denied(w);return}
  if r.Method!=http.MethodPost{http.Error(w,"method not allowed",http.StatusMethodNotAllowed);return}
  if h.Pairing==nil{http.Error(w,"unavailable",http.StatusServiceUnavailable);return}
+ if h.Admission!=nil&&!h.Admission.Allow(r.Context(),r.RemoteAddr,r.URL.Path){http.Error(w,"request limit",http.StatusTooManyRequests);return}
  switch r.URL.Path{
  case "/v1/control/login-challenge":h.loginChallenge(w,r)
  case "/v1/control/login":h.login(w,r)
@@ -205,6 +206,7 @@ func RecommendedTimeouts()ServerConfig{return ServerConfig{
 }}
 
 func(h Handler)limited(w http.ResponseWriter,r *http.Request)bool{
+ if h.Admission!=nil{return true} // Already admitted before dispatch.
  if h.Guard==nil||!h.Guard.Allow(r){http.Error(w,"request limit",http.StatusTooManyRequests);return false}
  return true
 }

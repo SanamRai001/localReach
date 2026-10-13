@@ -54,7 +54,8 @@ func serve(ctx context.Context,certFile,keyFile,dsn string,allowLocalTestDB bool
   Certificates:[]tls.Certificate{pair},
   MinVersion:tls.VersionTLS12,
  })
- handler:=pairapi.Handler{Auth:pgauth.New(db),Pairing:pgpairing.New(db),Guard:pairapi.NewGuard(nil)}
+ handler:=pairapi.Handler{Auth:pgauth.New(db),Pairing:pgpairing.New(db),
+  Guard:pairapi.NewGuard(nil),Admission:pairapi.NewSQLAdmission(db)}
  server:=&http.Server{
   Handler:handler,
   ReadHeaderTimeout:5*time.Second,ReadTimeout:10*time.Second,

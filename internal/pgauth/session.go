@@ -22,8 +22,10 @@ type Actor struct{Organization string;AdminID string;Role string}
 type Store struct{DB *sql.DB}
 func New(db *sql.DB)*Store{return &Store{DB:db}}
 func part(s string)string{return strconv.Itoa(len(s))+":"+s}
+// ChallengeMessage is the domain-separated byte message used by native key signers.
+func ChallengeMessage(org,admin,nonce string)[]byte{return []byte(challengeDomain+part(org)+part(admin)+part(nonce))}
 func SignChallenge(priv ed25519.PrivateKey,org,admin,nonce string)[]byte{
- return ed25519.Sign(priv,[]byte(challengeDomain+part(org)+part(admin)+part(nonce)))
+ return ed25519.Sign(priv,ChallengeMessage(org,admin,nonce))
 }
 func valid(s string)bool{return len(s)>0&&len(s)<=128&&strings.IndexFunc(s,func(r rune)bool{return r<32||r==127})==-1}
 func random(n int)(string,error){
