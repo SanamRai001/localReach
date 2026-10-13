@@ -1,26 +1,29 @@
 # Project state
 
 **Date:** 2026-10-13
-**Product:** LocalReach — outbound-only narrowly authorized LAN device access, designed to avoid agent-side router changes.
-**Branch:** `test/r2j6-separate-process-tls-acceptance`
-**Phase:** R2J.6A — separate OS process control-plane TLS endurance, crash and recovery acceptance.
-**Base:** `feat/r2j5-authenticated-outbound-session` (PR #34). All earlier PRs #1–#34 remain open and stacked. No merge/deploy.
+**Goal:** LocalReach — simple, outbound-only and narrowly authorized LAN device sharing.
+**Branch:** `feat/r2k1-device-discovery-read-grants`
+**Phase:** R2K.1 — independently approved discovery-only permission ledger plus passive local printer mDNS observation.
+**Base:** `test/r2j6-separate-process-tls-acceptance` (PR #35). Prior 35 PRs remain stacked/open; no main merge or deployment.
 
-## Verified preceding baseline
-R2J.5 latest final CI `38383543335` SUCCESS for all four jobs: Linux Go/vet/race, PostgreSQL connection leases and signed TLS streaming revocation, Windows DPAPI packages, macOS Keychain packages. No actual Internet pilot or physical devices.
+## Verified preceding foundation
+R2J.6A final GitHub CI `38387888892` SUCCESS: Linux Go/race, PostgreSQL signed sessions, real TLS control-plane process crash/lease recovery and revocation, Windows DPAPI, macOS Keychain. The separate-process test is on one VM; real cross-network R2J.6B acceptance remains unperformed.
 
-## This branch
-- **Bug fix:** `cmd/localreach-control` used HTTP server-global `WriteTimeout:10s`, disconnecting an otherwise healthy long-lived heartbeat stream. It now has no global response write timeout; streaming handler still bounds **each** write with its own 5-second per-frame deadline. Server read/header timeouts and client heartbeat watchdog remain.
-- `internal/pilotacceptance/acceptance_test.go` compiles/launches the actual control-plane executable as a separate OS process, configures ephemeral PEM TLS trust, and uses a separate client with test-only Ed25519 credentials and no database password.
-- Acceptance tests require disposable loopback PostgreSQL and run migration `060`–`065`. The test proves TLS certificate rejection, authenticated connection lasting **more than 12 seconds**, actual heartbeat, server process crash, client disconnect, 15s database lease expiry, server restart with the same agent key, successful reconnect, separately signed revocation cutting the stream, and denied revoked reconnect.
-- CI adds the process-level TLS test after the regular PostgreSQL integration suite, using a compiled control-plane binary. Tests are opt-in by environment; local unit suites skip this intrusive integration if not explicitly configured.
-- `docs/R2J6A_PROCESS_TLS_ACCEPTANCE.md` describes the test and exactly which real two-network requirements remain unverified.
+## R2K.1 code authored
+- Migration `066_device_read_grants.sql` adds one-hour, tenant/site/agent/device/capability-scoped, ACTIVE/REVOKED policies, nonce replay ledger and transactional audit. Only `PRINTER_DISCOVERY_READ` and `ATTENDANCE_DISCOVERY_READ` policy labels exist. They grant NO hardware operations.
+- `internal/pgcapability`: separate Ed25519-signed grant/revoke decision domain. Must be preprovisioned live OWNER/ADMIN, independently signed, same enrolled active agent/site, unique nonce. Deny by default. Expiry, revoked organization/admin/agent/pairing, tenant/site/device/capability mismatch all deny.
+- `internal/pairapi` admin-only `/v1/control/device-read-decision` route requires tenant OWNER/ADMIN bearer with exact matching signed admin ID and a separate device grant signature. Always responds `deviceOperations=DISABLED`.
+- Native `internal/adminremote` and `cmd/localreach-admin grant-read|revoke-read` sign decisions with the separate OS-protected admin key. Operator must type exact full discovery fingerprint; no auto-grant after pairing.
+- `internal/landiscovery` observes unsolicited mDNS SRV printer advertisements with **no packets sent or device connected to**; strict bounded parser; candidate SHA256 fingerprints are UNTRUSTED DNS-SD hints, not hardware identity. Attendance reader discovery not implemented.
+- `cmd/localreach-agent discover -duration 5s` performs an explicitly requested 1–30 second, max-20-item, passive local-only observation. No pairing credentials, cloud uploads or device commands.
+- Tests: malformed/spoofable mDNS handling, strict listen duration, real PostgreSQL signatures/expiry/replay/cross-tenant/agent/admin revocation, native HTTPS signed grant/revoke and no implicit device capability.
+- `docs/R2K1_DISCOVERY_READ_GRANTS.md` details security boundaries.
 
 ## Verification
-**R2J.6A CI VERIFIED GREEN:** GitHub Actions run `38387592837` SUCCESS across Linux Go/vet/race, Windows DPAPI/full packages, macOS Keychain/full packages, and disposable PostgreSQL tests plus the separate-process real-control-plane TLS acceptance. The acceptance test `TestSeparateProcessTLSCrashReclaimRevocation` actually ran and PASSED in 31.41s, proving the >12-second stream, process kill, lease timeout, process restart and separately signed revocation. This is not a two-network pilot. A documentation-only update triggers a subsequent CI run.
+R2K.1 committed; **new branch CI pending**. Must verify Linux tests/vet/race, serial disposable PostgreSQL pairing/auth/device-grant/TLS acceptance, Windows native DPAPI builds, macOS Keychain builds. This is policy and passive discovery, NOT usable hardware access.
 
-## Important limits
-This runs separate processes on one CI machine, **not** on different networks. There has been **no** cloud deployment, DNS/certificate provisioning, remote client's public IP firewall test, CGNAT acceptance, external device installation, printer or attendance access. All command/device capabilities remain NONE. Real R2J.6B multi-network pilot requires explicit authorization, approved staging service, and operator-owned TLS/firewall/PostgreSQL environment; not performed. Production SSO, signed installer, scalable gateway, revocation metrics and device capability grants remain unfinished.
+## Blockers
+No actual WAN two-network R2J.6B pilot, public deployment, production SSO/abuse protection, signed installer or native background service, secure hardware identity binding, validated active printer discovery, attendance protocols, per-operation grant enforcement, real LAN/device commands or hardware acceptance. Streaming agent presence still explicitly transmits `capabilities=NONE`. It cannot print, read attendance records or proxy arbitrary TCP.
 
 ## Next
-Verify CI; correct any discovered bugs. Then R2J.6B actual authorized two-network pilot, plus code work toward R2K.1 audited, separately approved per-device permission grants and read-only discovery. Do not deploy/merge or operate hardware without explicit approval.
+CI first. R2K.2 scoped, vetted opt-in device discovery and authenticated local policy enforcement with manual hardware pilot; R2J.6B actual two-network staging acceptance separately. Main merges/deployments require user permission.
