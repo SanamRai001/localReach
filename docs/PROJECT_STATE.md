@@ -12,10 +12,10 @@ R2J.2 latest CI run `38374321624` completed SUCCESS across Linux Go unit/vet/rac
 ## This branch
 - `migrations/063_pairing_invitations.sql`: tenant/site-scoped 256-bit random invitation codes stored only as hashes, strict one-time redemption, 10-minute expiry, issuer scope, pending-request reference and audit.
 - `internal/pgpairing`: atomic issue (live OWNER/ADMIN checked in SQL) and one-time redeem that produces **PENDING** request only, retaining separate signed approval.
-- `internal/pairapi`: guarded HTTPS-native administrator key login, invite issue, invitation redemption. Role-bound `pgauth` bearer and separately signed decision remain required to approve. Fail-closed bounded local per-peer admission guard on new routes, no browser-origin access.
+- `internal/pairapi`: guarded HTTPS-native administrator key login, invite issue, invitation redemption, and independently authenticated fingerprint review before approval. Role-bound `pgauth` bearer and separately signed decision remain required to approve. Fail-closed bounded local per-peer admission guard on new routes, no browser-origin access.
 - `internal/agentremote.Client.RequestInvitation` and native `localreach-agent request`: existing OS-protected identity submits only its public key and short-lived secret read over stdin (never CLI argv); prints pending ID, not approval.
 - `cmd/localreach-control`: **loopback-only** (127.0.0.1:19443) manually runnable TLS service requiring explicit operator certificate/key and PostgreSQL DSN, with `verify-full` by default. Only an explicitly authorized local `localreach_test` database may use opt-in plaintext PostgreSQL.
-- PostgreSQL invitation concurrency, expiry, scope, admin revocation and replay tests; HTTPS login→invite→pending→signed approval→enrollment tests; limiter and operator config negative tests.
+- PostgreSQL invitation concurrency, expiry, scope, admin revocation and replay tests; HTTPS login→invite→pending→fingerprint review→signed approval→enrollment tests; limiter and operator config negative tests.
 - `docs/R2J3_INVITATION_CONTROL.md` documents developer-local commands and release blockers.
 
 ## Verification
