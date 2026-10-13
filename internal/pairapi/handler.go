@@ -32,7 +32,7 @@ type Pairing interface{
  RedeemInvitation(context.Context,string,string,ed25519.PublicKey)(pgpairing.Record,error)
  ReviewRequest(context.Context,string,string)(pgpairing.Review,error)
 }
-type Handler struct{Auth Auth;Pairing Pairing;Guard *Guard;Admission Admission;Sessions Sessions;SessionInterval time.Duration}
+type Handler struct{Auth Auth;Pairing Pairing;Guard *Guard;Admission Admission;Sessions Sessions;ReadPolicy ReadGrantPolicy;SessionInterval time.Duration}
 type proposal struct {
  Organization string `json:"organization"`
  Site string `json:"site"`
@@ -127,6 +127,7 @@ func(h Handler)ServeHTTP(w http.ResponseWriter,r *http.Request){
  case "/v1/control/login":h.login(w,r)
  case "/v1/control/invite":h.invite(w,r)
  case "/v1/control/review":h.review(w,r)
+ case "/v1/control/device-read-decision":h.decideDeviceRead(w,r)
  case "/v1/agent/request-invite":h.redeemInvite(w,r)
  case "/v1/control/propose": h.propose(w,r)
  case "/v1/control/decide":h.decide(w,r)

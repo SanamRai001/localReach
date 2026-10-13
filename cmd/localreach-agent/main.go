@@ -1,5 +1,5 @@
 // LocalReach native agent prototype. Start manually; NOT an installed service.
-// No device discovery, printer/attendance commands or public listener.
+// Passive local discovery only; no printer/attendance commands or public listener.
 package main
 
 import(
@@ -23,6 +23,7 @@ import(
  "github.com/SanamRai001/localReach/internal/agentremote"
  "github.com/SanamRai001/localReach/internal/agentservice"
  "github.com/SanamRai001/localReach/internal/localsetup"
+ "github.com/SanamRai001/localReach/internal/landiscovery"
 )
 func trustedClient()*http.Client{
  return &http.Client{
@@ -38,9 +39,9 @@ func trustedClient()*http.Client{
  }
 }
 func run(ctx context.Context,args []string)error{
- if len(args)==0{return errors.New("required command: init, request, enroll or serve")}
+ if len(args)==0{return errors.New("required command: init, discover, request, enroll or serve")}
  command:=args[0]
- if command!="init"&&command!="request"&&command!="enroll"&&command!="serve"{return errors.New("unknown command (expected init, request, enroll or serve)")}
+ if command!="init"&&command!="discover"&&command!="request"&&command!="enroll"&&command!="serve"{return errors.New("unknown command (expected init, discover, request, enroll or serve)")}
  flags:=flag.NewFlagSet(command,flag.ContinueOnError)
  dir:=flags.String("identity-dir","","identity directory (defaults to user local profile)")
  gateway:=flags.String("gateway","","trusted HTTPS control-plane URL")
@@ -48,8 +49,22 @@ func run(ctx context.Context,args []string)error{
  requestID:=flags.String("request","","administrator-approved pairing request ID")
  webDir:=flags.String("web","web/setup","static setup assets (repo-relative)")
  retry:=flags.Duration("retry",2*time.Second,"minimum reconnect delay (bounded exponential backoff)")
+ discoveryDuration:=flags.Duration("duration",5*time.Second,"passive local DNS-SD listen duration (1s to 30s)")
  if err:=flags.Parse(args[1:]);err!=nil{return err}
  if flags.NArg()!=0{return errors.New("unexpected positional argument")}
+ if command=="discover"{
+  if *gateway!=""||*org!=""||*requestID!=""||*dir!=""{return errors.New("passive discovery accepts no credentials, organization or server")}
+  if *discoveryDuration<time.Second||*discoveryDuration>30*time.Second{return errors.New("discovery duration must be 1 to 30 seconds")}
+  fmt.Println("Listening passively for local printer mDNS announcements (no packets sent).")
+  items,err:=landiscovery.Listen(ctx,*discoveryDuration)
+  if err!=nil{return fmt.Errorf("passive discovery unavailable: %w",err)}
+  if len(items)==0{fmt.Println("No announcements observed; this does not mean no printers exist.");return nil}
+  for _,d:=range items{
+   fmt.Printf("%s | %s | fingerprint %s | UNVERIFIED mDNS hint\n",d.Type,d.Name,d.Fingerprint)
+  }
+  fmt.Println("No candidates were contacted, authorized or shared with the cloud.")
+  return nil
+ }
  directory:=*dir
  if directory==""{
   def,err:=agentkeys.DefaultDir()

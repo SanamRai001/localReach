@@ -22,6 +22,7 @@ import(
  "github.com/SanamRai001/localReach/internal/pairapi"
  "github.com/SanamRai001/localReach/internal/pgauth"
  "github.com/SanamRai001/localReach/internal/pgpairing"
+ "github.com/SanamRai001/localReach/internal/pgcapability"
  "github.com/SanamRai001/localReach/internal/staginggate"
  _ "github.com/lib/pq"
 )
@@ -67,7 +68,7 @@ func serveConfigured(ctx context.Context,certFile,keyFile,dsn string,allowLocalT
   Certificates:[]tls.Certificate{pair},
   MinVersion:minimumTLS,
  })
- handler:=pairapi.Handler{Auth:pgauth.New(db),Pairing:pgpairing.New(db),Sessions:pgpairing.New(db),
+ handler:=pairapi.Handler{Auth:pgauth.New(db),Pairing:pgpairing.New(db),Sessions:pgpairing.New(db),ReadPolicy:pgcapability.New(db),
   Guard:pairapi.NewGuard(nil),Admission:pairapi.NewSQLAdmission(db)}
  var routed http.Handler=handler
  if stage!=nil{routed=stage.Wrap(handler)}
