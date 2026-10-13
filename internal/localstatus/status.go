@@ -13,8 +13,10 @@ type Snapshot struct {
  Pairing string `json:"pairing"`
  Connection string `json:"connection"`
  Devices string `json:"devices"`
+ Verification string `json:"verification,omitempty"`
+ LastVerifiedAt string `json:"lastVerifiedAt,omitempty"`
 }
-func Default() Snapshot{return Snapshot{Agent:"RUNNING",Pairing:"NOT_PAIRED",Connection:"OFFLINE",Devices:"NOT_DISCOVERED"}}
+func Default() Snapshot{return Snapshot{Agent:"RUNNING",Pairing:"NOT_PAIRED",Connection:"OFFLINE",Devices:"NOT_DISCOVERED",Verification:"NOT_CHECKED"}}
 func Handler(snapshot func()Snapshot)http.Handler{
  if snapshot==nil{snapshot=Default}
  return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
