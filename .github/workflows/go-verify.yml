@@ -61,6 +61,10 @@ jobs:
           cache: false
       - name: Transactional PostgreSQL pairing tests
         run: go test -race -p 1 -count=1 -v ./internal/pgpairing ./internal/pgauth ./internal/agentlifecycle ./internal/pairapi
+      - name: Separate-process TLS, crash, restart and revocation acceptance
+        run: |
+          go build -o /tmp/localreach-control-pilot ./cmd/localreach-control
+          LOCALREACH_CONTROL_BINARY=/tmp/localreach-control-pilot go test -race -count=1 -v -timeout=120s ./internal/pilotacceptance
 
   windows-agent-key-storage:
     runs-on: windows-latest
