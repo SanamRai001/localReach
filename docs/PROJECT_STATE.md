@@ -17,7 +17,7 @@ R2J.5 latest final CI `38383543335` SUCCESS for all four jobs: Linux Go/vet/race
 - `docs/R2J6A_PROCESS_TLS_ACCEPTANCE.md` describes the test and exactly which real two-network requirements remain unverified.
 
 ## Verification
-R2J.6A pushed, **new CI run pending**. Linux unit/vet/race, process-level Postgres/TLS pilot test, Windows DPAPI and macOS Keychain build suites must pass before phase can be called verified.
+**R2J.6A CI VERIFIED GREEN:** GitHub Actions run `38387592837` SUCCESS across Linux Go/vet/race, Windows DPAPI/full packages, macOS Keychain/full packages, and disposable PostgreSQL tests plus the separate-process real-control-plane TLS acceptance. The acceptance test `TestSeparateProcessTLSCrashReclaimRevocation` actually ran and PASSED in 31.41s, proving the >12-second stream, process kill, lease timeout, process restart and separately signed revocation. This is not a two-network pilot. A documentation-only update triggers a subsequent CI run.
 
 ## Important limits
 This runs separate processes on one CI machine, **not** on different networks. There has been **no** cloud deployment, DNS/certificate provisioning, remote client's public IP firewall test, CGNAT acceptance, external device installation, printer or attendance access. All command/device capabilities remain NONE. Real R2J.6B multi-network pilot requires explicit authorization, approved staging service, and operator-owned TLS/firewall/PostgreSQL environment; not performed. Production SSO, signed installer, scalable gateway, revocation metrics and device capability grants remain unfinished.
