@@ -29,6 +29,8 @@ jobs:
         run: go build -o /tmp/localreach-agent ./cmd/localreach-agent
       - name: Compile loopback control plane
         run: go build -o /tmp/localreach-control ./cmd/localreach-control
+      - name: Compile administrator CLI
+        run: go build -o /tmp/localreach-admin ./cmd/localreach-admin
       - name: Verify separate processes over TLS
         run: bash scripts/verify-two-process.sh
 
@@ -77,6 +79,8 @@ jobs:
         run: go build -o localreach-agent.exe ./cmd/localreach-agent
       - name: Compile Windows loopback control plane
         run: go build -o localreach-control.exe ./cmd/localreach-control
+      - name: Compile Windows administrator CLI
+        run: go build -o localreach-admin.exe ./cmd/localreach-admin
 
   macos-agent-key-storage:
     runs-on: macos-latest
@@ -97,6 +101,8 @@ jobs:
         run: go build -o /tmp/localreach-agent ./cmd/localreach-agent
       - name: Compile macOS loopback control plane
         run: go build -o /tmp/localreach-control ./cmd/localreach-control
+      - name: Compile macOS administrator CLI
+        run: go build -o /tmp/localreach-admin ./cmd/localreach-admin
       - name: Verify CGo-disabled keychain path fails closed
         env:
           CGO_ENABLED: '0'
