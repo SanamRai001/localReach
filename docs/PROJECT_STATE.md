@@ -18,7 +18,7 @@ R2I.3 latest CI `38367445700` SUCCESS: PostgreSQL pairing, native signer lifecyc
 - `docs/R2J1_HTTPS_PAIRING.md` details protocol, test acceptance and safety gaps.
 
 ## Verification
-R2J.1 changes committed; **new branch CI not verified yet**. Verify all four Linux/PostgreSQL/Windows/macOS jobs before accepting.
+**R2J.1 CI verified green**: GitHub Actions run `38369546185` concluded SUCCESS for all four jobs: Linux Go unit/vet/race plus separate-process HTTPS smoke, disposable PostgreSQL admin/auth/HTTPS-native pairing integration, Windows DPAPI/full packages, and macOS native Keychain/full packages/disabled-CGo. An earlier run failed from handler method-check ordering (GET returned 503 instead of 405), corrected in commit `daf4aa0647adf0774cf235b01b1179ef1a98d278`. A subsequent documentation-only commit triggers its own CI verification.
 
 ## Not production ready
 No public HTTPS pairing listener, real administrator login/SSO and user consent UI, production rate limiting and trust-onboarding, signed installer, OS service, actual WAN/CGNAT relay, live agent online status, optional Keychain/Secret Service live acceptance, explicit device capabilities, printer or attendance driver, public deployment or hardware testing.
