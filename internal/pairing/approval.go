@@ -81,6 +81,19 @@ func(m *Manager)InvitationForAgent(id string,signature []byte)(string,error){
 func SignHandoff(private ed25519.PrivateKey,id string)[]byte{
  return ed25519.Sign(private,[]byte(handoffDomain+id))
 }
+// InvitationWithChallenge binds agent key possession to a transport-issued
+// single-use nonce. The transport must consume nonce atomically first.
+func(m *Manager)InvitationWithChallenge(id,nonce string,signature []byte)(string,error){
+ m.mu.Lock();defer m.mu.Unlock()
+ rec,ok:=m.requests[id]
+ if !ok||rec.request.State!=Approved||!m.now().Before(rec.request.ExpiresAt)||len(signature)!=ed25519.SignatureSize||rec.invitation==""||len(nonce)<24{return "",ErrDenied}
+ if !ed25519.Verify(rec.request.PublicKey,[]byte("localreach/pairing/handoff-challenge/v1:"+id+":"+nonce),signature){return "",ErrDenied}
+ return rec.invitation,nil
+}
+// SignChallengeHandoff is the candidate agent's signature for a fresh challenge.
+func SignChallengeHandoff(private ed25519.PrivateKey,id,nonce string)[]byte{
+ return ed25519.Sign(private,[]byte("localreach/pairing/handoff-challenge/v1:"+id+":"+nonce))
+}
 // Redeem requires the local agent to prove private-key possession. Approved
 // invitations are kept private in memory and never exposed by Get.
 func(m *Manager)Redeem(id string,proof []byte)(identity.Agent,error){

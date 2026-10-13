@@ -1,26 +1,31 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, click Connect, and authorize only approved local-device capabilities.
-**Active branch:** `feat/r2f-proof-bound-pairing-handoff`
-**Phase:** R2F approved invitation handoff, internal primitive.
-**Base:** `feat/r2e-admin-pairing-approval` (PR #20); PRs #1–#20 remain stacked and unmerged. No deployment.
+**Goal:** Install once, click Connect, approve strictly scoped LAN-device capabilities.
+**Active branch:** `feat/r2g-pairing-tls-transport`
+**Phase:** R2G TLS pairing transport experiment, CI verified.
+**Base:** `feat/r2f-proof-bound-pairing-handoff` PR #21. PRs #1–#22 remain open and unmerged. No deployment.
 
-## Verified history
-Prior R1L Go CI tests, vet, race and lab compilation succeeded. R2A two-process loopback HTTPS smoke CI succeeded. Neither verifies internet connectivity, UI pairing nor physical devices.
+## Verified CI
+- Earlier R1L Go test/vet/race/build and R2A independent-process HTTPS mock smoke test succeeded.
+- R2C–R2F prior CI defects corrected in their respective stacked branches; newest CI runs for PR branches #18–#21 concluded SUCCESS.
+- R2G GitHub Actions run **38356105419** concluded **SUCCESS** for Go tests, vet, race tests, lab build and separate-process HTTPS mock smoke test.
+- R2G branch was safely rebased against the corrected R2F head; PR #22 had no merge conflicts at latest check.
+- No live WAN, CGNAT, physical-device, signed-installer or browser end-to-end verification.
 
-## New R2F work
-- `internal/pairing.Manager.InvitationForAgent` makes the invitation obtainable after approval only when a candidate demonstrates possession of its originally submitted Ed25519 private key by signing the random request ID under an independent domain separator.
-- `SignHandoff` client helper for signed proof.
-- The returned invitation remains one-time at the registry enrollment boundary; the agent signs the invitation with the existing identity proof and Redeem consumes it atomically within the in-memory registry.
-- Added tests for unapproved/wrong-key handoff denial, successful approval/enrollment, wrong-key enrollment, replay rejection and expiry.
-- `docs/R2F_PAIRING_HANDOFF.md` specifies security assumptions and remaining work.
+## R2G changes
+- Repaired R2F malformed Go source in the approval handoff.
+- Corrected upstream unused localstatus test import and localsetup index-page redirect loop in PR branches #18–#22.
+- Added TLS-only `internal/pairtransport` handler with preprovisioned Ed25519 administrator signing keys, authenticated tenant-scoped signed admin decisions, single-use admin nonce, fresh signed agent challenge, approved invitation retrieval and one-time enrollment proof.
+- Added negative tests for plaintext/browser-origin requests, wrong admin/agent keys, cross-tenant approval, replay, expiry and enrollment reuse.
+- `docs/R2G_TLS_PAIRING.md` describes non-production safety boundaries.
 
-## Verification
-GitHub source committed; **R2F CI result not yet confirmed**. No user manual tests requested.
-
-## Security limitations
-The pairing manager is not an authenticated service: its authorization boolean is trusted input, not real user login/role verification. No actual HTTPS invitation transfer, secure OS key vault, durable approval/audit, tenant admin policy, transport binding, rate limits, browser pairing, or capability grants. No public networking, hardware or installer integration. The current setup UI must continue to show NOT_PAIRED until a real authenticated status exists.
+## Release blockers
+- This handler starts **no internet listener** and supports only test-injected admin keys. Pair request creation is still in-process.
+- No real administrator login, persistent tenant policy, audit trail, durable approval/identity store, OS-managed agent key storage, rate limits beyond bounded state, TLS channel binding or multi-instance replay tracking.
+- No live pairing UI, real device grants, signed installer, discovery, printers or attendance device communication.
+- A legacy static request-ID handoff method remains available internally; do not use it as a network authentication method.
+- Mock lab transport is loopback only. Do not expose it publicly.
 
 ## Next
-Verify R2F CI; implement separately authenticated tenant-admin decision grants and a confidential authenticated invitation delivery endpoint with abuse resistance, then durable state and a real agent key store. Keep public listeners and physical commands disabled until security review and integration acceptance.
+R2H: durable and auditable tenant-admin approval with protected agent key storage, then integrate paired status into the local agent/UX. Keep command capabilities disabled and require security review and network/hardware acceptance before public deployment.
