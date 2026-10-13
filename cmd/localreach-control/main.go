@@ -22,6 +22,7 @@ import(
  "github.com/SanamRai001/localReach/internal/pairapi"
  "github.com/SanamRai001/localReach/internal/pgauth"
  "github.com/SanamRai001/localReach/internal/pgpairing"
+ "github.com/SanamRai001/localReach/internal/pgcapability"
  "github.com/SanamRai001/localReach/internal/staginggate"
  _ "github.com/lib/pq"
 )
