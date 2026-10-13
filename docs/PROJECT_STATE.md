@@ -19,7 +19,7 @@ R2J.2 latest CI run `38374321624` completed SUCCESS across Linux Go unit/vet/rac
 - `docs/R2J3_INVITATION_CONTROL.md` documents developer-local commands and release blockers.
 
 ## Verification
-Code committed. **R2J.3 branch CI not yet confirmed**. Must verify all Linux/Windows/macOS/PostgreSQL jobs before accepting. No actual Internet ingress or end-user signed installation was exercised.
+**R2J.3 implementation CI VERIFIED GREEN**: GitHub Actions run `38376891945` concluded SUCCESS on the final code + fingerprint-review changes: Linux unit/vet/race and local HTTPS smoke, disposable PostgreSQL invitation/role/replay/concurrency/TLS workflow, Windows DPAPI/full packages/control-plane build, and macOS Keychain/full packages/control-plane build. An ensuing documentation-only update will cause a separate CI run. There was no Internet ingress, installed service, signed end-user release, WAN/CGNAT or physical device acceptance.
 
 ## Explicit remaining limitations
 Invitation does **not** authorize pairing or device permissions. Admin public-key provisioning remains operator-managed and is not a consumer SSO/login portal. Control plane is localhost only, so it is not reachable from a remote agent over the Internet. No distributed throttling, authenticated remote proxy, certificate automation, OS service/installer, persistent active relay session, truthful ONLINE signal, real WAN/CGNAT tests, or explicit device grants. No printers/attendance hardware access. Do NOT expose via public port or proxy.
