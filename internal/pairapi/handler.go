@@ -96,8 +96,8 @@ func(h Handler)ServeHTTP(w http.ResponseWriter,r *http.Request){
  if r.TLS==nil{http.Error(w,"TLS required",http.StatusUpgradeRequired);return}
  // Native clients only. Never accept browser ambient credentials/CORS.
  if r.Header.Get("Origin")!=""||r.Header.Get("Cookie")!=""{denied(w);return}
- if h.Pairing==nil{http.Error(w,"unavailable",http.StatusServiceUnavailable);return}
  if r.Method!=http.MethodPost{http.Error(w,"method not allowed",http.StatusMethodNotAllowed);return}
+ if h.Pairing==nil{http.Error(w,"unavailable",http.StatusServiceUnavailable);return}
  switch r.URL.Path{
  case "/v1/control/propose": h.propose(w,r)
  case "/v1/control/decide":h.decide(w,r)
