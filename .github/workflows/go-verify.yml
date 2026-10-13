@@ -54,7 +54,7 @@ jobs:
           go-version-file: go.mod
           cache: false
       - name: Transactional PostgreSQL pairing tests
-        run: go test -race -p 1 -count=1 -v ./internal/pgpairing ./internal/pgauth ./internal/agentlifecycle
+        run: go test -race -p 1 -count=1 -v ./internal/pgpairing ./internal/pgauth ./internal/agentlifecycle ./internal/pairapi
 
   windows-agent-key-storage:
     runs-on: windows-latest
