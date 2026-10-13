@@ -1,25 +1,25 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, click Connect, explicitly approve secure LAN-device capabilities.
-**Active branch:** `feat/r2c-local-status-pairing-gate`
-**Phase:** R2C read-only localhost agent-status contract and pairing trust specification.
-**Base:** `feat/r2b-setup-experience` PR #17; upstream PRs #1–#16 stacked and unmerged.
+**Goal:** Install once, click Connect and authorize scoped LAN-only device capabilities.
+**Active branch:** `feat/r2d-loopback-setup-service`
+**Phase:** R2D local setup page and read-only status served from the same trusted loopback origin.
+**Base:** `feat/r2c-local-status-pairing-gate` (PR #18); stacked PRs #1–#18 remain open. No merge/deploy.
 
-## Previously verified
-R1L Go test/vet/race/build workflow successful; R2A distinct gateway/agent loopback HTTPS CI smoke run 38351933557 successful. This does not prove real internet connectivity or hardware support.
+## Prior confirmed verification
+Go CI test/vet/race/build passed in R1L; loopback separate-process HTTPS mock acceptance passed in R2A. No actual internet network or device verification.
 
-## R2C changes
-- Added `internal/localstatus` with GET `/v1/local/status`; no listener is started, loopback-only peer check, restricted local setup origin and zero mutation routes.
-- Added Go tests for local/remote access, read-only method, allowed/disallowed origins.
-- Setup walkthrough now attempts a read-only status fetch when the Connect preview is shown; if absent or loaded from local file, explicitly says unavailable.
-- `docs/R2C_STATUS_PAIRING_CONTRACT.md` specifies admin-authorized single-use pairing, agent-held signing keys, verification and per-capability approval. **No real pairing, installation or discovery implemented.**
+## R2D changes
+- `internal/localsetup` serves exact static setup assets and existing `/v1/local/status` handler from `127.0.0.1:18788`.
+- Strict Host, loopback peer, optional Origin, read-only method and asset path checks; CSP and other conservative response headers.
+- `cmd/localreach-setup` standalone preview entrypoint, started by `go run ./cmd/localreach-setup`.
+- Added tests for invalid host, nonloopback peer, origin, mutation and static allowlist, plus `docs/R2D_LOCAL_SETUP.md`.
 
 ## Verification
-R2C files published to GitHub, **no R2C CI result verified yet**. Earlier R2A successful. No live status service, browser integration/e2e test, device or WAN test.
+R2D implementation committed, new CI not confirmed yet. No local process was started, nor real UI browser or OS service tested during authoring.
 
-## Security limitations
-A local status contract is not a secure admin approval flow. No browser-native bridge, real local agent service, durable admin identity policy, secure OS key store, public deployment, channel-bound session or actual capability grants. No hardware may be exposed. Avoid portraying simulated preview as actual connection.
+## Security / functionality limitations
+This is a read-only local preview service, not an installed agent or actual connection. Default status remains NOT_PAIRED/OFFLINE. No authorization-backed pairing, native secure key store, user grants, signed installer, device discovery, physical adapters, WAN listener or CGNAT verification. Same-origin status doesn't authenticate malicious local software. Keep real devices and public exposure disabled.
 
 ## Next
-R2D: serve trusted local setup UI and status together using a dedicated loopback-only process, strengthen Origin/Host validation against rebinding, then build admin-authorized pairing protocol with secure key storage. Verify CI and avoid exposing public services.
+Confirm current PR CI, then implement admin-approved pairing as a separate transactional security boundary. Only after that: first real installer/agent status, explicit capability grants and supported discovery. Preserve PR stack without unauthorized merges.
