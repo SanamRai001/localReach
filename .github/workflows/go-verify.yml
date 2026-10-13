@@ -55,3 +55,17 @@ jobs:
           cache: false
       - name: Transactional PostgreSQL pairing tests
         run: go test -race -p 1 -count=1 -v ./internal/pgpairing ./internal/pgauth
+
+  windows-agent-key-storage:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Run Windows DPAPI identity tests
+        run: go test -race -count=1 -v ./internal/agentkeys
+      - name: Compile all Windows packages
+        run: go test -count=1 ./...

@@ -1,33 +1,32 @@
 # Project state
 
 **Date:** 2026-10-13
-**Product:** LocalReach — simple, explicitly authorized outbound access to approved LAN-only devices.
-**Active branch:** `feat/r2h3-postgres-transactional-pairing`
-**Phase:** R2H.3 — PostgreSQL transactional pairing foundation.
-**Base:** `feat/r2h2-durable-pairing-lifecycle` (PR #24). Prior PRs stacked and unmerged; no deployment.
+**Goal:** Install once, click Connect, and authorize strictly scoped LAN device capabilities.
+**Active branch:** `feat/r2i1-windows-dpapi-agent-identity`
+**Phase:** R2I.1 — Windows current-user DPAPI identity persistence and recovery.
+**Base:** `feat/r2h3-postgres-transactional-pairing` (PR #25). All upstream PRs #1–#25 remain open and stacked, no main merge/deploy.
 
-## Verified before this branch
+## Verified baseline
+R2H.3 latest GitHub Actions run `38360284081` was green: Go test/vet/race and separate-process HTTPS mock smoke, plus transactional PostgreSQL pairing and scoped Ed25519 administrator login/session verification. No real WAN/hardware tests.
 
-R2H.2 final CI run `38358320876` completed SUCCESS. Earlier Go test/vet/race, local TLS separate-process mock smoke and pairing policy tests passed. No production WAN, installer, device or hardware verification.
-
-## This branch
-
-- Added PostgreSQL migration `migrations/060_pairing_postgres.sql`: organizations/sites, tenant-scoped admin key and role membership, pairing requests, consumed signed nonces, challenge hashes, enrolled agent identities, revocation and audit.
-- Implemented `internal/pgpairing` `database/sql` path: authorized, signed, expiring admin decisions and nonce replay guard, pairing state and audit in **one PostgreSQL serializable transaction**. Approval no longer leaves a consumed nonce behind if its pairing/audit write fails.
-- Persistent challenge + agent-signed enrollment (same transaction for challenge consumption, agent identity and audit). Revocation updates pairing and agent registry together.
-- Real PostgreSQL integration tests cover rollback-injected audit failure, replay, concurrent decisions, scope/RBAC, restarts, enrollment and revocation.
-- Added disposable PostgreSQL 16 job to GitHub Actions and pinned PostgreSQL driver dependency.
-- Added `migrations/061_admin_sessions_postgres.sql` and `internal/pgauth`: Ed25519 admin-key challenge/response login, five-minute hashed persistent sessions, live role/organization checks, logout and login audit, including restart/replay/revocation tests.
-- `docs/R2H3_POSTGRES_PAIRING.md` documents contracts, test conditions and remaining security work.
+## This phase
+- `internal/agentkeys` introduces explicit `Create` / `Load` of a per-user Ed25519 signing identity.
+- On Windows, secret bytes are encrypted with current-user scoped DPAPI and saved as a versioned, bounded encrypted payload in a local-profile `identity.dpapi` file. No plaintext file fallback, no machine-wide DPAPI scope.
+- On unsupported platforms, key creation/decryption fails closed. Linux and macOS native secure key stores are not yet implemented.
+- Identity is never returned as JSON or served to a browser; the trusted Go backend can access its public key, fingerprint and restricted native signing function. No automatic key regeneration after loss/corruption, nor automatic overwrites.
+- Added Windows runtime tests of DPAPI roundtrip, encryption tampering, restarts, identity stability, concurrent create refusal and corruption recovery. Existing Linux test rejects plaintext fallback.
+- Added a real `windows-latest` CI job for Windows DPAPI tests, Windows build and broader package tests.
+- `docs/R2I1_WINDOWS_DPAPI.md` details Windows user scope, ACL caveats, recovery limitations and next milestones.
 
 ## Verification
+**R2I.1 verification GREEN**: GitHub Actions run `38363776961` passed all three jobs: Windows DPAPI runtime tests and Windows package tests, standard Go tests/vet/race/two-process TLS mock, and real PostgreSQL transactional pairing/auth tests. This is verification of the storage primitive under hosted Windows runner conditions, not production installation or cross-user credential recovery. A docs-only update triggers a follow-up CI run.
 
-**R2H.3 CI SUCCESS**: GitHub Actions run `38360139307` passed BOTH standard Go verification (unit/integration, vet, race, lab compilation, two-process mock HTTPS smoke) and real PostgreSQL integration tests covering pairing transactions and administrator key-login sessions. The PostgreSQL integration job uses `-p 1` because its isolated test packages reset the same disposable database; actual concurrent approval tests run within the database tests. A later documentation-only change will trigger a fresh CI run.
-
-## Scope and blockers
-
-This is an isolated transactional backend, **not yet connected** to a live pairing UI, public server, agent service or device adapter. Bootstrap administrator public keys and role membership are stored in PostgreSQL and validated by signatures. New `pgauth` provides a real **key-based administrator authentication primitive** with scoped expiring sessions, but there is no password login, SSO, or integration with an authoritative external role provider; key/session services are not yet wired to an HTTP or UI workflow. Proposals need protected, rate-limited intake. No OS private-key vault, installer signing, real WAN/CGNAT connection, explicit capability grants or hardware acceptance. Production DB TLS/backup/migration/permissions and incident recovery remain outstanding.
+## Remaining production gaps
+- No installed Windows background agent, actual pairing to the PostgreSQL backend, OS-safe user/key lifecycle or diagnostic UI.
+- Windows DPAPI under interactive user is not a machine-service-wide credential store. Windows service account selection, ACL/symlink hardening, signing-key revocation and rotation require design and tests.
+- Linux Keyring and macOS Keychain support remain unimplemented and cannot use a plaintext fallback.
+- User-supplied protocol messages must be domain-separated before signing; no unrestricted signer RPC or browser access.
+- No real login/SSO integration, public-safe gateway, WAN/CGNAT verification, capability grants, printers, attendance device adapters, installers or hardware testing.
 
 ## Next
-
-Proceed to R2I local OS key storage and safe agent identity recovery; integrate real tenant login, rate-limited pairing UX and capability grants before public/hardware work. Leave all PRs open until explicit merge approval.
+Verify Windows CI and fix any findings. Then R2I.2 native macOS/Linux secure credential backends, and R2I.3 agent enrollment/restore/rotation integration. Keep public listeners and hardware commands disabled.
