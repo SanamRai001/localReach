@@ -1,0 +1,27 @@
+name: Go verification
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'test/**'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Unit and integration tests
+        run: go test -count=1 ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Race tests
+        run: go test -race -count=1 ./...
+      - name: Compile lab
+        run: go build -o /tmp/localreach-lab ./cmd/localreach-lab
