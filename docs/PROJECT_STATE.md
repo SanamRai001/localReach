@@ -1,30 +1,34 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, click Connect, authorize only approved LAN device capabilities.
-**Active branch:** `feat/r2h-durable-admin-trust-ledger`
-**Phase:** R2H.1 persistent administrator public-key trust, revocation, and audit/replay ledger.
-**Base:** `feat/r2g-pairing-tls-transport` (PR #22). All PRs #1–#22 remain stacked and open; no merges, deployments or real devices.
+**Goal:** Install once, connect securely, and approve narrowly scoped local device capabilities.
+**Current branch:** `feat/r2h2-durable-pairing-lifecycle`
+**Phase:** R2H.2 prototype durable request/approval/enrollment/revocation lifecycle.
+**Base:** `feat/r2h-durable-admin-trust-ledger` (PR #23). All upstream PRs #1–#23 stacked/open; main not changed, no deployment.
 
 ## Verified baseline
-R2G full GitHub Actions verification passed on latest baseline SHA `0f027e3a69b106d71b0b0f2267ac4f023dc2ab80` (run 38356237707): Go tests, vet, race, lab build and separate-process HTTPS mock smoke test. These tests do not exercise public WAN or physical hardware.
 
-## R2H.1 code
-- New `internal/admintrust` file-backed, single-writer, fsynced append-only ledger stores scoped public keys, explicit revocations and consumed decision nonce hashes.
-- Events form a SHA-256 hash chain; replay validates fields, hash linkage, state transitions and rejects partial/tampered records. Fixed 64 MiB cap, fail-closed ownership sentinel; no automatic recovery.
-- `pairtransport.NewWithTrust` integrates persisted administrator key verification and replay denial, signed decision expiry bounds and per-tenant/key selection. Decisions are consumed before asking the in-memory pairing manager to approve.
-- Added Go tests for restart survival, revocation, competing decisions, corruption, signing and TLS handler restart. Existing `New` in-memory test constructor remains for legacy isolated experiments.
-- `docs/R2H_DURABLE_ADMIN_TRUST.md` details assumptions, limitations and next steps.
+R2H.1 latest GitHub Actions run `38357488592` completed SUCCESS: Go tests, vet, race tests, lab compilation and local separate-process HTTPS mock smoke test. These do not prove production WAN or device capability access.
+
+## R2H.2 changes
+
+- `internal/pairledger` persists scoped pairing proposals, admin decisions, enrolled identities and revocations in one bounded, fsynced hash-chained journal. Public keys only; no private keys, invitation tokens or device grants. A restart discards ephemeral one-use agent proof challenges.
+- `internal/pairpolicy.Controller` verifies signed, short-lived tenant/key-bound admin decisions using the previous persisted `admintrust` store and consumes nonces before recording a pairing decision. This is **fail-closed, not atomic across two journals**.
+- Tests for restart survival, signature possession, expired/unauthorized requests, one-time challenge/replay, corrupted log, concurrent requests and admin revocation.
+- `docs/R2H2_DURABLE_PAIRING.md` describes missing production security gates.
 
 ## Verification
-R2H changes authored and published; **R2H CI verified green** for commit `d5dc260990e64986248c6a10700ebfa5979102b9`, run `38357367366`: unit/integration, vet, race tests, lab build and separate-process HTTPS smoke test. The resulting documentation-only update will be checked separately. No new release, desktop app, internet deployment or hardware acceptance.
 
-## Security and remaining architectural gaps
-- Admin public keys are provisioned and revoked by trusted in-process calls, not authenticated operator/admin services. Signatures do not themselves prove current tenant-admin membership.
-- Hash chains detect ordinary corruption, not adversarial rewrites by filesystem owners. Audit needs external checkpointing/immutability for production.
-- In-memory `pairing.Manager` and `identity.Registry` cannot recover pairing state after crashes. No atomic persistence across trust and pairing stores.
-- No secure native key storage, key rotation, CSRF-safe real browser pairing, rate limiting/lockout, robust OS file locks, compaction or authorized capability grants.
-- No public-safe gateway, real WAN/CGNAT verification, signed installer, discovery or printer/attendance adapter.
+New R2H.2 code committed; **CI not yet verified** as of this project-state entry. No real hardware, WAN, OS installer or public listener.
+
+## Crucial limitations
+
+- Still no actual authenticated administrator login/role verification; all public keys are trusted bootstrap data. No rate-limited externally authenticated pairing proposal service.
+- Existing `pairing.Manager` / `pairtransport` still use the previous in-memory pairing model. New persistent ledger is independently tested and not yet wired to an installed agent or UI.
+- File ownership is an O_EXCL sentinel, not a portable robust lock; no crash-safe recovery, compaction, multi-node operation or tamper-proof audit.
+- No single transaction between administrator nonce consumption and pairing decision. A crash may consume the nonce without recording an approval; fail closed.
+- No OS keychain, signed installer, discovery, device grants, real cross-network or hardware verification. Do not expose public gateway or allow physical effects.
 
 ## Next
-Proceed with durable transactional pairing/identity and real administrator authentication (R2H.2), followed by protected desktop agent identity (R2I). Keep public/device operations disabled pending independent acceptance.
+
+Verify and fix R2H.2 CI. Follow with transactional DB-backed identity/admin policy and durable pairing integration (R2H.3), protected native agent key storage (R2I), real pairing UX (R2J), and consent-based discovery. Keep PRs unmerged pending explicit permission.
