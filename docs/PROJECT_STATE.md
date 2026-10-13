@@ -1,31 +1,31 @@
 # Project state
 
 **Date:** 2026-10-13
-**Project:** LocalReach
-**Goal:** Make secure LAN-only device capability integration accessible through a one-time local install and task-focused pairing UX.
-**Current branch:** `docs/foundation-rfc`
-**Main branch:** Initialized with minimal README; documentation branch is proposed for review.
-**Phase:** R0 — documentation and validation.
+**Goal:** One-install, minimal-click, securely scoped connectivity for LAN-only device capabilities.
+**Current branch:** `feat/r1a-command-prototype`
+**Phase:** R1A — local mock lifecycle implementation; R1B secure enrollment and cross-network experiment not started.
+**Baseline:** `docs/foundation-rfc` (documentation PR #1 remains open); `main` contains initial README only.
 
-## Completed this phase
-- Captured product vision, scope and non-goals.
-- Specified first-run UX, recovery and measurement.
-- Proposed modular control plane, gateway, Go agent, adapters and SDK architecture.
-- Described enrollment, identity, tenant permissions, durable command semantics and security risks.
-- Recorded research inspirations and phased acceptance gates.
+## Changes this phase
+- Added Go 1.22 module, loopback-only mock relay and polling agent.
+- Created typed mock.ping command endpoint, simple QUEUED -> DISPATCHED -> SUCCEEDED lifecycle, status query, unauthorized/unsupported/duplicate rejection.
+- Added httptest coverage and PowerShell manual reproduction guide at `docs/R1A_LOCAL_PROTOTYPE.md`.
+- Deliberately limited to loopback. No actual secure remote access, signed installation, device discovery or tenant model.
 
 ## Verification
-- Documentation-only: no build, unit tests, hardware tests or network proof performed.
-- GitHub file publication and pull-request state must be checked after writing.
-- No claims of production readiness.
+- GitHub writes verified during creation; tests **not executed in this environment**.
+- User acceptance required: `go test ./...` followed by manual mock round-trip.
+- No network/hardware/UX test completed.
 
-## Risks and unresolved decisions
-- Signed Windows installer and browser handoff security.
-- Exact supported printer and attendance hardware.
-- Hardware acknowledgement and retry safety.
-- Distribution/revocation of agent credentials.
-- Hosting economics, data residency, and license dependency audit.
-- Confirmation of UX with nontechnical users.
+## Risks / deviations
+- Shared development bearer token, no identity enrollment, no TLS termination.
+- In-memory queue loses jobs and may strand DISPATCHED items on agent crash.
+- Polling is only a disposable protocol experiment, not RFC transport.
+- Acknowledged device state cannot prove physical printer completion.
+- No production usage of this branch; never expose localhost relay publicly.
 
 ## Next phase
-Review RFC and UX flows. Run R1 mock-device networking + security spike only after architecture gates are accepted. Keep this single state document updated with actual branch, changes, verification and next action every phase.
+1. User runs commands in R1A guide and reports actual test output.
+2. Review enrollment identity, tenant authorization and crash-safe command model.
+3. Build R1B on a safe branch: secure outbound connection over TLS, mock cross-network scenario, failure injection.
+4. Preserve one-click setup as release UX target, not an R1A achievement.
