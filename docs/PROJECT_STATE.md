@@ -1,28 +1,29 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** One-install, minimal-click, securely scoped access to local device capabilities.
-**Active branch:** `feat/r1b-agent-identity`
-**Baseline:** `feat/r1a-command-prototype`; dependent documentation PR #1 and implementation PR #2 are open. Main has starter README only.
-**Current phase:** R1B identity spike written; not integrated into an internet-facing transport.
+**Goal:** Secure device capabilities with install-once, one-click operator UX.
+**Current branch:** `feat/r1c-session-handshake`
+**Phase:** R1C.1 identity session primitives committed, not integrated.
+**Branch chain:** `main` (README) <- `docs/foundation-rfc` (PR #1) <- `feat/r1a-command-prototype` (PR #2) <- `feat/r1b-agent-identity` (PR #3) <- this branch.
 
-## Implemented
-- R0 proposed product vision, UX, architecture, security, research and roadmap.
-- R1A localhost-only Go mock relay/agent, typed mock command, in-memory state, httptest example.
-- R1B `internal/identity`: one-time short-TTL scope-bound invitation, token hashing, Ed25519 proof-of-possession, unique pubkey binding, in-memory revocation, unit test cases for expiry, replay redemption, wrong key, concurrency and defensive copies.
-- R1B threat-boundary notes at `docs/R1B_IDENTITY_SPIKE.md`.
+## Work completed
+- R0 proposed UX, architecture RFC, security requirements, roadmap.
+- R1A Go localhost-only mock relay/agent and simple command lifecycle.
+- R1B short-lived one-time tenant/site invitation and Ed25519 proof-of-possession.
+- R1C.1 single-use expiring session challenges, opaque hashed ephemeral session tokens, replay rejection, revocation checked on each authorization, bounded in-memory state and tests.
 
 ## Verification
-- GitHub files pushed; test suite **not executed** by GitHub connector and **not reported as passing**.
-- User prefers batching local/manual verification until meaningful integration milestones.
-- No external network proof, production enrollment, installer, discovery, tenant integration, or hardware verification.
+- GitHub source and docs committed; PR publication pending at last update.
+- Go tests **not run**; user requested batching local verification later.
+- No real network, TLS, OS installer, device discovery, physical hardware or usability verification.
 
-## Risks / blockers
-- R1A remains loopback-only and authenticated by shared development token; **never expose its HTTP listener to the internet**.
-- R1B is an isolated in-memory identity primitive; no admin authorization, persistence, TLS, secure agent key storage, challenge replay tracking, certificate identity binding, or active-session revocation.
-- Agent commands have no durable journal/lease model; crash boundaries unsafe for physical effects.
-- Dependency PRs #1 and #2 are still open; do not merge without approval.
-- Current UI does not exist. One-click UX remains the product target, not proven behavior.
+## Security limitations / risks
+- R1A shared-token HTTP relay remains loopback only and must not be exposed.
+- R1B/R1C are independent in-memory packages, NOT connected to HTTP transport.
+- Session tokens are bearer credentials not yet channel-bound or backed by durable revocation.
+- No transactional persistent enrollment, authenticated administrator route, nonce rate limiting, distributed challenge state, secure key storage or authenticated TLS.
+- No command journal/leases; non-idempotent physical effects not safe.
+- `Begin` is intentionally a primitive and must be wrapped with rate limits and secure transport before public use.
 
-## Next implementation slice
-R1C: independently authenticated TLS outbound transport with persisted transactional enrollment and strict session binding; preserve mock-only capability and bounded queues. Add security and recovery tests before any public bind or real hardware. Reserve longer manual verification for a cohesive end-to-end test gate. Maintain `docs/PROJECT_STATE.md` only as the phase record.
+## Next phase
+R1C.2: authenticated encrypted gateway and edge connection using these primitives, denial-by-default network exposure, tightly scoped mock operation, and failure tests. Do not claim one-click or WAN compatibility until the installer and two-network test succeed. Batch substantial local acceptance rather than requiring user action after each commit.
