@@ -6,6 +6,7 @@ import (
  "crypto/ed25519"
  "encoding/base64"
  "encoding/json"
+ "io"
  "net/http"
  "strings"
  "time"
