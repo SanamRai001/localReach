@@ -20,7 +20,7 @@ R2J.4B final CI run `38380986752` succeeded across Linux Go/vet/race and local H
 - `docs/R2J5_OUTBOUND_SESSIONS.md` documents protocol, timing, operator constraints and readiness blockers.
 
 ## Verification
-R2J.5 code authored. **Final branch CI not yet confirmed.** Must check Linux Go/vet/race, real PostgreSQL stream/lease tests, Windows native DPAPI and full packages, macOS native Keychain/full packages before treating the phase as verified.
+**R2J.5 implementation CI VERIFIED GREEN**: GitHub Actions run `38383290834` concluded SUCCESS in all four jobs: Linux unit/vet/race + two-process TLS smoke, disposable PostgreSQL session lease + authenticated live HTTPS streaming + revocation integration, Windows DPAPI/full packages, and macOS Keychain/full packages. This verifies code under controlled test conditions, not a real cross-network deployment or hardware operations. A documentation-only update triggers a fresh final-HEAD run.
 
 ## Important limits
 This is a **read-only persistent presence session**. No printer/attendance device commands, generic reverse proxy, TCP forwarding, terminal, LAN discovery or device capability grants are available. No production public gateway or actual WAN pilot was executed. The restricted staging listener still requires operator-controlled DNS/TLS/source-IP firewall and only supports a tiny maximum of 16 concurrent routed requests. Crash cleanup waits for the 15s lease timeout; status is not security authorization. Signed installers, true user SSO, revocation fanout, multi-region streaming scale, production abuse protection and hardware acceptance remain unfinished.
