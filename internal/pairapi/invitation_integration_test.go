@@ -2,6 +2,8 @@ package pairapi
 
 import (
  "context"
+ "crypto/sha256"
+ "encoding/hex"
  "encoding/base64"
  "net/http"
  "net/http/httptest"
@@ -38,6 +40,16 @@ func TestInvitationOverTLSRequiresAdminAndRemainsPending(t *testing.T){
  if err!=nil||pending==""{t.Fatalf("redeem pending invitation: %v",err)}
  record,err:=pgpairing.New(db).Get(context.Background(),"org",pending)
  if err!=nil||record.State!="PENDING"{t.Fatalf("unexpected autoapproval: %v %+v",err,record)}
+ if status,_=post(t,client,server.URL,"/v1/control/review","",reviewRequest{
+  Organization:"org",RequestID:pending,
+ });status!=403{t.Fatalf("unauthenticated fingerprint review succeeded: %d",status)}
+ status,review:=post(t,client,server.URL,"/v1/control/review",login["token"],reviewRequest{
+  Organization:"org",RequestID:pending,
+ })
+ expected:=sha256.Sum256(agent.PublicKey())
+ if status!=200||review["fingerprint"]!=hex.EncodeToString(expected[:])||review["state"]!="PENDING"{
+  t.Fatalf("admin review mismatch: %d %+v",status,review)
+ }
  if _,err=native.FinishEnrollment(context.Background(),"org",pending,agent);err==nil{t.Fatal("invitation directly enrolled")}
  // The same admin must explicitly sign a new, request-scoped decision.
  decision:=pgpairing.AdminDecision{Organization:"org",RequestID:pending,AdminID:"owner",Action:pgpairing.Approve,
