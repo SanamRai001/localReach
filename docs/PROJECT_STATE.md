@@ -22,7 +22,7 @@ R2H.2 final CI run `38358320876` completed SUCCESS. Earlier Go test/vet/race, lo
 
 ## Verification
 
-The initial transactional PostgreSQL implementation passed both standard Go and PostgreSQL CI jobs. Administrator session/login integration tests were added afterward; **the final branch CI result is pending confirmation**. Must verify both jobs again before marking phase green.
+**R2H.3 CI SUCCESS**: GitHub Actions run `38360139307` passed BOTH standard Go verification (unit/integration, vet, race, lab compilation, two-process mock HTTPS smoke) and real PostgreSQL integration tests covering pairing transactions and administrator key-login sessions. The PostgreSQL integration job uses `-p 1` because its isolated test packages reset the same disposable database; actual concurrent approval tests run within the database tests. A later documentation-only change will trigger a fresh CI run.
 
 ## Scope and blockers
 
@@ -30,4 +30,4 @@ This is an isolated transactional backend, **not yet connected** to a live pairi
 
 ## Next
 
-Verify new administrator-login CI tests and resolve any failures. Then develop R2I local OS key storage and safe agent identity recovery; integrate real tenant login, rate-limited pairing UX and capability grants before public/hardware work. Leave all PRs open until explicit merge approval.
+Proceed to R2I local OS key storage and safe agent identity recovery; integrate real tenant login, rate-limited pairing UX and capability grants before public/hardware work. Leave all PRs open until explicit merge approval.
