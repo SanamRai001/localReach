@@ -17,7 +17,7 @@ R2J.1 latest CI run `38369735674` SUCCESS across Linux Go unit/vet/race and mock
 - Added monitor/local handler tests, CLI fail-closed command tests and cross-platform native diagnostic binary compilation. `docs/R2J2_LOCAL_AGENT.md` provides explicit user instructions and limits.
 
 ## Verification
-R2J.2 changes committed; **full branch CI result not yet verified**. Must pass all existing Go, PostgreSQL, Windows and macOS CI jobs before acceptance.
+**R2J.2 implementation CI VERIFIED GREEN**: GitHub Actions run `38374087799` concluded SUCCESS for Linux Go unit/vet/race, native diagnostic agent build, local two-process TLS smoke, disposable PostgreSQL pairing integration, Windows DPAPI/native agent/full package build, and macOS Keychain/native agent/full package build. This validates code and local mocks, not installation on a customer device, production gateway or a live WAN relay. A subsequent documentation-only update triggers another CI run.
 
 ## Remaining production blockers
 No signed installer/autostart service, actual deployed authenticated TLS control-plane, administrator consent and invitation UI, multi-tenant abuse rate limits, persistent authorized cloud command session, WAN/CGNAT acceptance, device grants/discovery/printer or attendance drivers, production OS service accounts, native vault live acceptance and recovery/rotation UI. An ephemeral successful identity proof is NOT an online cloud relay session.
