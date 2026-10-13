@@ -54,7 +54,7 @@ func digest(e event)string{
  b:=sha256.Sum256(append([]byte(domain),data...))
  return base64.RawURLEncoding.EncodeToString(b[:])
 }
-func validID(s string)bool{return len(s)>0&&len(s)<=128&&!strings.ContainsAny(s,"\\x00\\r\\n")}
+func validID(s string)bool{return len(s)>0&&len(s)<=128&&strings.IndexFunc(s,func(r rune)bool{return r<32||r==127})==-1}
 func (s *Store)apply(e event)error{
  if !validID(e.Tenant)||!validID(e.KeyID)||e.At<=0{return ErrCorrupt}
  k:=key(e.Tenant,e.KeyID)
