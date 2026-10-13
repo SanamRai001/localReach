@@ -88,9 +88,10 @@ func(s Store)path()string{return filepath.Join(s.Dir,filename)}
 // No automatic key rotation or regeneration is allowed.
 func(s Store)Create()(*Identity,error){
  if err:=s.directory();err!=nil{return nil,err}
+ createdAt:=time.Now().UTC().Truncate(time.Second)
  public,private,err:=ed25519.GenerateKey(rand.Reader)
  if err!=nil{return nil,err}
- raw,err:=json.Marshal(payload{Key:base64.RawURLEncoding.EncodeToString(private),CreatedAt:time.Now().UTC().Unix()})
+ raw,err:=json.Marshal(payload{Key:base64.RawURLEncoding.EncodeToString(private),CreatedAt:createdAt.Unix()})
  if err!=nil{return nil,err}
  protected,err:=protect(raw)
  for n:=range raw{raw[n]=0}
@@ -108,7 +109,7 @@ func(s Store)Create()(*Identity,error){
  if writeErr!=nil{return nil,writeErr}
  if closeErr!=nil{return nil,closeErr}
  if !bytes.Equal(public,private.Public().(ed25519.PublicKey)){return nil,ErrCorrupt}
- return &Identity{private:private,createdAt:time.Now().UTC()},nil
+ return &Identity{private:private,createdAt:createdAt},nil
 }
 // Load never creates a replacement identity when bytes are missing, damaged
 // or OS DPAPI refuses decryption. An explicit recovery flow is required.
