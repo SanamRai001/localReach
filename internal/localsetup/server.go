@@ -3,6 +3,8 @@
 package localsetup
 
 import (
+ "context"
+ "errors"
  "io/fs"
  "net"
  "net/http"
@@ -43,4 +45,31 @@ func Serve(site fs.FS,status func()localstatus.Snapshot)error{
  defer listener.Close()
  server:=&http.Server{Handler:Handler(site,status),ReadHeaderTimeout:5*time.Second,IdleTimeout:30*time.Second,MaxHeaderBytes:8192}
  return server.Serve(listener)
+}
+
+// ServeContext owns the local read-only UI listener until cancellation.
+// This remains a loopback-only service; there are no mutation endpoints.
+func ServeContext(ctx context.Context,site fs.FS,status func()localstatus.Snapshot)error{
+ listener,err:=net.Listen("tcp",Address)
+ if err!=nil{return err}
+ defer listener.Close()
+ server:=&http.Server{
+  Handler:Handler(site,status),
+  ReadHeaderTimeout:5*time.Second,ReadTimeout:10*time.Second,
+  WriteTimeout:10*time.Second,IdleTimeout:30*time.Second,MaxHeaderBytes:8192,
+ }
+ stopped:=make(chan struct{})
+ go func(){
+  select {
+  case <-ctx.Done():
+   timeout,cancel:=context.WithTimeout(context.Background(),5*time.Second)
+   defer cancel()
+   _=server.Shutdown(timeout)
+  case <-stopped:
+  }
+ }()
+ err=server.Serve(listener)
+ close(stopped)
+ if errors.Is(err,http.ErrServerClosed){return nil}
+ return err
 }
