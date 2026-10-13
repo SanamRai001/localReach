@@ -18,7 +18,7 @@ R2J.3 latest CI run `38377092425` SUCCESS for all four Linux/PostgreSQL/Windows/
 - `docs/R2J4A_ADMIN_AND_ADMISSION.md` describes manual operation and remaining release blockers.
 
 ## Verification
-R2J.4A source committed; **new phase CI pending**. Must verify Linux Go/vet/race, disposable PostgreSQL including cross-process admission and admin workflow, Windows DPAPI/full builds, and macOS Keychain/full builds before accepting.
+**R2J.4A CI VERIFIED GREEN:** GitHub Actions run `38378897953` concluded SUCCESS across all four jobs: Linux Go unit/vet/race + mock TLS smoke, real PostgreSQL cross-process admission/native administrator login/invite/fingerprint approval and existing pairing suites, Windows DPAPI/full package/admin CLI build, and macOS Keychain/full package/admin CLI build. A documentation-only follow-up triggers a separate final-head CI run. These tests do not verify a deployed gateway or real remote network.
 
 ## Security boundaries and blockers
 Shared admission is a prototype, NOT an Internet-ready distributed WAF. No trusted reverse proxy/client IP policy, bounded purge/monitoring, authoritative human SSO or admin key provisioning UI, secure key rotation, signed installer or native background agent, actual public gateway, outbound persistent command session, device grants/discovery or hardware usage. Loopback prototype cannot serve a remote agent. No printer, attendance, arbitrary tunnel, shell or TCP-forward features.
