@@ -1,29 +1,26 @@
-# Project state
+# LocalReach project state
 
 **Date:** 2026-10-13
-**Goal:** LocalReach — simple, outbound-only and narrowly authorized LAN device sharing.
-**Branch:** `feat/r2k1-device-discovery-read-grants`
-**Phase:** R2K.1 — independently approved discovery-only permission ledger plus passive local printer mDNS observation.
-**Base:** `test/r2j6-separate-process-tls-acceptance` (PR #35). Prior 35 PRs remain stacked/open; no main merge or deployment.
+**Branch:** `feat/r2k1a-working-local-setup-dashboard`
+**Phase:** R2K.1A — replace nonfunctional setup tour with real localhost dashboard.
+**Base:** `feat/r2k1-device-discovery-read-grants` (PR #36). Previous PRs stacked and unmerged. No public deployment.
 
-## Verified preceding foundation
-R2J.6A final GitHub CI `38387888892` SUCCESS: Linux Go/race, PostgreSQL signed sessions, real TLS control-plane process crash/lease recovery and revocation, Windows DPAPI, macOS Keychain. The separate-process test is on one VM; real cross-network R2J.6B acceptance remains unperformed.
+## Last verified foundation
+R2K.1 final CI `38389796103` SUCCESS: Linux Go/vet/race, PostgreSQL device discovery-read grants and TLS acceptance, Windows DPAPI, macOS Keychain. Physical printer discovery and real WAN were not tested.
 
-## R2K.1 code authored
-- Migration `066_device_read_grants.sql` adds one-hour, tenant/site/agent/device/capability-scoped, ACTIVE/REVOKED policies, nonce replay ledger and transactional audit. Only `PRINTER_DISCOVERY_READ` and `ATTENDANCE_DISCOVERY_READ` policy labels exist. They grant NO hardware operations.
-- `internal/pgcapability`: separate Ed25519-signed grant/revoke decision domain. Must be preprovisioned live OWNER/ADMIN, independently signed, same enrolled active agent/site, unique nonce. Deny by default. Expiry, revoked organization/admin/agent/pairing, tenant/site/device/capability mismatch all deny.
-- `internal/pairapi` admin-only `/v1/control/device-read-decision` route requires tenant OWNER/ADMIN bearer with exact matching signed admin ID and a separate device grant signature. Always responds `deviceOperations=DISABLED`.
-- Native `internal/adminremote` and `cmd/localreach-admin grant-read|revoke-read` sign decisions with the separate OS-protected admin key. Operator must type exact full discovery fingerprint; no auto-grant after pairing.
-- `internal/landiscovery` observes unsolicited mDNS SRV printer advertisements with **no packets sent or device connected to**; strict bounded parser; candidate SHA256 fingerprints are UNTRUSTED DNS-SD hints, not hardware identity. Attendance reader discovery not implemented.
-- `cmd/localreach-agent discover -duration 5s` performs an explicitly requested 1–30 second, max-20-item, passive local-only observation. No pairing credentials, cloud uploads or device commands.
-- Tests: malformed/spoofable mDNS handling, strict listen duration, real PostgreSQL signatures/expiry/replay/cross-tenant/agent/admin revocation, native HTTPS signed grant/revoke and no implicit device capability.
-- `docs/R2K1_DISCOVERY_READ_GRANTS.md` details security boundaries.
+## Current implementation
+- `cmd/localreach-setup` now hosts a real dashboard on `127.0.0.1:18788` rather than a three-button loop. It optionally takes `-gateway https://TRUSTED_URL -organization ORG` at startup; without those flags, identity creation and passive local discovery still work and cloud pairing is clearly unavailable.
+- `internal/localdashboard.Service`: reads existing OS-protected identity without auto-regeneration; explicit `Create identity`; real invitation submission and PENDING_APPROVAL tracking; separately approved enrollment and existing-key reconnect; after verification starts authenticated `agentservice.LiveMonitor`. ONLINE only after actual authenticated stream frames. No arbitrary LAN or printer commands.
+- `internal/localdashboard.Handler`: fixed Host, direct loopback peer, strict same-origin POST, no cookie, per-process cryptographically random 256-bit CSRF token, custom header, JSON body limits, unknown-field rejection, one active operation. Status and bootstrap are GET-only. No CORS, remote routes, browser private keys, or browser-specified gateway URLs.
+- `web/setup/index.html`, `setup.js`, `style.css`: responsive dashboard with truthful OS identity, cloud session, passive Find Devices, pairing request/approval/finish/reconnect, specific errors and status refresh. No simulation tour.
+- `landiscovery.Listen` invoked only when the user clicks Find Devices, bounded to 8 seconds, max 20 local untrusted mDNS printer announcements; no packets sent, no device commands or upload.
+- Security and state-flow unit tests with mocked native signer, remote backend and passive discovery. `docs/R2K1A_WORKING_SETUP_DASHBOARD.md` contains runnable commands and clear limitations.
 
 ## Verification
-**R2K.1 implementation CI VERIFIED GREEN:** GitHub Actions run `38389538415` completed SUCCESS for all four jobs: Linux Go/vet/race and DNS-SD parser tests, disposable PostgreSQL signed discovery-only grant/expiry/replay/tenant isolation plus native HTTPS grant/revoke, existing separate-process authenticated TLS crash/recovery acceptance, Windows DPAPI/full packages and macOS Keychain/full packages. This verifies code, not real physical printers, vendor attendance devices or a cross-network staging pilot. A documentation-only update triggers a new CI run.
+**IMPLEMENTATION CI VERIFIED GREEN:** run `38395864149` SUCCESS on all four jobs: Linux Go unit/vet/race including dashboard origin/CSRF/status and real HTML/CSS/JS asset tests, explicit Node JavaScript syntax validation, disposable PostgreSQL pairing/permission/real separate-process TLS acceptance, Windows DPAPI/full package tests and macOS Keychain/full package tests. Actual user Windows UI clicks and local printer visibility remain for manual acceptance. This is not a deployed cloud gateway or WAN test. A subsequent documentation-only update triggers its own CI verification.
 
-## Blockers
-No actual WAN two-network R2J.6B pilot, public deployment, production SSO/abuse protection, signed installer or native background service, secure hardware identity binding, validated active printer discovery, attendance protocols, per-operation grant enforcement, real LAN/device commands or hardware acceptance. Streaming agent presence still explicitly transmits `capabilities=NONE`. It cannot print, read attendance records or proxy arbitrary TCP.
+## Critical product limits
+Default dashboard runs locally without Postgres/cloud, but **cloud connection is disabled** until the operator deploys a trusted HTTPS service and independently provisions/approves a tenant and agent. No signed installer, automatic OS background service, public gateway, real two-network acceptance, hardware attestation, verified printer integration, attendance reader, printer command, raw TCP or generic tunnel. Browser labels all mDNS discovery fingerprints untrusted. All stacked PRs remain unmerged, no deployment.
 
 ## Next
-CI first. R2K.2 scoped, vetted opt-in device discovery and authenticated local policy enforcement with manual hardware pilot; R2J.6B actual two-network staging acceptance separately. Main merges/deployments require user permission.
+Pass new CI. Provide Windows PowerShell pull/checkout/run instructions with no repeat cloning. Then R2K.1B improve real device discovery/verified read-only printer identification and operator pairing UX, followed by authorized staging/hardware pilot.

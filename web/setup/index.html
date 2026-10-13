@@ -1,3 +1,73 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0c1926"><title>LocalReach · Connect this computer</title><link rel="stylesheet" href="style.css"></head>
-<body><main class="shell"><header class="top"><div class="logo"><span class="mark">↗</span> LocalReach</div><span class="beta">Setup preview · mock only</span></header><section class="hero"><span class="eyebrow">YOUR DEVICES, WITHOUT THE COMPLEXITY</span><h1>Connect this computer.</h1><p>Make approved local devices accessible to your apps. No network addresses, port forwarding, or VPN setup.</p></section><section class="panel" aria-label="Setup steps"><div class="steps"><span class="step on" id="step1">1 <span>Install</span></span><span class="rule"></span><span class="step" id="step2">2 <span>Connect</span></span><span class="rule"></span><span class="step" id="step3">3 <span>Devices</span></span></div><div class="content" id="content" aria-live="polite"><div class="glyph">⬇</div><h2>Start with the LocalReach agent</h2><p>The agent connects outward securely, so your devices can stay on their local network.</p><div class="notice"><strong>Preview mode</strong><span>This walkthrough uses simulated states. It does not install software, pair a real agent, or scan your network.</span></div></div><div class="actions"><button id="back" class="secondary" hidden>Back</button><button id="next">Preview connection <span aria-hidden="true">→</span></button></div></section><footer>Designed for scoped device access. You always choose what to share.</footer></main><script src="setup.js"></script></body></html>
+<html lang="en">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <meta name="theme-color" content="#0b1826">
+ <title>LocalReach · Device workspace</title>
+ <link rel="stylesheet" href="style.css">
+</head>
+<body>
+ <div class="app-shell">
+  <aside class="sidebar">
+   <a class="brand" href="/" aria-label="LocalReach home"><span class="brand-icon">↗</span><span>Local<span class="brand-accent">Reach</span></span></a>
+   <div class="side-nav">
+    <div class="nav-heading">WORKSPACE</div>
+    <a class="nav-link active" href="#overview"><span>◈</span> Overview</a>
+    <a class="nav-link" href="#devices"><span>▦</span> Local devices</a>
+    <a class="nav-link" href="#connection"><span>⇄</span> Cloud pairing</a>
+   </div>
+   <div class="sidebar-bottom"><span class="tiny-dot"></span> Local-only interface <small>No remote device access enabled</small></div>
+  </aside>
+  <main class="main">
+   <header class="topbar"><div class="breadcrumb">Your workspace <span>/</span> <b>Overview</b></div><span class="local-tag">● 127.0.0.1 · Local dashboard</span></header>
+   <div class="page">
+    <section id="overview" class="hero">
+     <div><p class="eyebrow">DEVICE CONNECTION WORKSPACE</p><h1>Everything connected,<br><em>nothing complicated.</em></h1><p class="hero-copy">Set up this computer, find nearby printers, and request secure access only when your organization is ready.</p></div>
+     <div class="hero-visual" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="device-glow">↗</div><span class="hero-spark spark-one"></span><span class="hero-spark spark-two"></span></div>
+    </section>
+    <div id="alert" class="alert" role="status" aria-live="polite" hidden></div>
+    <section class="status-section" aria-label="Connection status">
+     <div class="section-heading"><div><h2>System status</h2><p>Live local state. Nothing here is simulated.</p></div><button id="refresh" class="button text-button" type="button">↻ Refresh</button></div>
+     <div class="stat-grid">
+      <article class="stat-card"><div class="stat-icon">▣</div><div><span class="stat-label">THIS COMPUTER</span><strong id="identity-label">Checking…</strong><small id="identity-hint">Loading secure identity</small></div></article>
+      <article class="stat-card"><div class="stat-icon">◉</div><div><span class="stat-label">CLOUD SESSION</span><strong id="connection-label">Checking…</strong><small id="connection-hint">Waiting for status</small></div></article>
+      <article class="stat-card"><div class="stat-icon">⌁</div><div><span class="stat-label">NEARBY DEVICES</span><strong id="devices-label">Not checked</strong><small id="devices-hint">Passive printer discovery</small></div></article>
+     </div>
+    </section>
+    <div class="work-grid">
+     <section id="devices" class="workspace-card">
+      <div class="card-top"><span class="card-icon mint">▦</span><span class="pill">ON THIS NETWORK</span></div>
+      <h2>Find your devices</h2>
+      <p>Listen for nearby printer announcements. LocalReach won't send scans, connect to a printer, or share your list online.</p>
+      <div class="action-row"><button id="discover" class="button primary" type="button">Find devices <span>↗</span></button><span id="discovery-progress" class="helper">Ready to look</span></div>
+      <div id="device-results" class="device-results" aria-live="polite"><div class="empty"><span>◌</span><strong>No discovery run yet</strong><small>Select Find devices to listen for 8 seconds.</small></div></div>
+     </section>
+     <section id="connection" class="workspace-card">
+      <div class="card-top"><span class="card-icon blue">⇄</span><span id="pairing-pill" class="pill">NOT CONNECTED</span></div>
+      <h2>Connect to your organization</h2>
+      <p id="gateway-info">Checking whether a trusted cloud gateway is configured…</p>
+      <div class="identity-box">
+       <div><span class="stat-label">OS-PROTECTED IDENTITY</span><strong id="fingerprint">Checking…</strong></div>
+       <button id="initialize" type="button" class="button subtle">Create identity</button>
+      </div>
+      <div id="pairing-form">
+       <label for="invitation">One-time invitation code</label>
+       <input id="invitation" type="password" autocomplete="off" spellcheck="false" placeholder="Paste code from your administrator" maxlength="100">
+       <div class="pair-buttons">
+        <button id="request" class="button primary" type="button">Request pairing ↗</button>
+        <button id="finish" class="button subtle" type="button">Finish approved pairing</button>
+       </div>
+       <button id="reconnect" type="button" class="button text-button">Reconnect an already enrolled identity ↻</button>
+      </div>
+      <div id="pairing-details" class="info-line" aria-live="polite">An invitation requests approval; it does not connect or authorize devices.</div>
+     </section>
+    </div>
+    <section class="note"><span>◎</span><div><strong>Privacy is built into the workflow.</strong><p>Discovery results remain on this computer. Pairing and device permissions require separate administrator approval. Printer and attendance operations are not enabled yet.</p></div></section>
+    <footer>LocalReach <span>·</span> Early development build <span>·</span> No device commands enabled</footer>
+   </div>
+  </main>
+ </div>
+ <script src="setup.js"></script>
+</body>
+</html>

@@ -17,6 +17,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
+      - name: Validate dashboard JavaScript
+        run: node --check web/setup/setup.js
       - name: Unit and integration tests
         run: go test -count=1 ./...
       - name: Vet
