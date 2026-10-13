@@ -66,7 +66,22 @@ func(m *Manager)Decide(id,tenant string,authorized bool,approve bool)(Request,er
  m.requests[id]=rec
  return copyRequest(rec.request),nil
 }
-// InvitationForAgent releases a short-lived approved invitation only to the\n// holder of the originally proposed Ed25519 key. The random request ID is\n// signed with domain separation. Caller MUST use confidential authenticated\n// transport; no HTTP endpoint is exposed in this phase.\nfunc(m *Manager)InvitationForAgent(id string,signature []byte)(string,error){\n m.mu.Lock();defer m.mu.Unlock()\n rec,ok:=m.requests[id]\n if !ok||rec.request.State!=Approved||!m.now().Before(rec.request.ExpiresAt)||len(signature)!=ed25519.SignatureSize||rec.invitation==""{return "",ErrDenied}\n if !ed25519.Verify(rec.request.PublicKey,[]byte(handoffDomain+id),signature){return "",ErrDenied}\n return rec.invitation,nil\n}\n// SignHandoff proves key possession to the internal pairing manager.\nfunc SignHandoff(private ed25519.PrivateKey,id string)[]byte{\n return ed25519.Sign(private,[]byte(handoffDomain+id))\n}\n// Redeem requires the local agent to prove private-key possession. Approved
+// InvitationForAgent releases a short-lived approved invitation only to the
+// holder of the originally proposed Ed25519 key. The random request ID is
+// signed with domain separation. Caller MUST use confidential authenticated
+// transport; no HTTP endpoint is exposed in this phase.
+func(m *Manager)InvitationForAgent(id string,signature []byte)(string,error){
+ m.mu.Lock();defer m.mu.Unlock()
+ rec,ok:=m.requests[id]
+ if !ok||rec.request.State!=Approved||!m.now().Before(rec.request.ExpiresAt)||len(signature)!=ed25519.SignatureSize||rec.invitation==""{return "",ErrDenied}
+ if !ed25519.Verify(rec.request.PublicKey,[]byte(handoffDomain+id),signature){return "",ErrDenied}
+ return rec.invitation,nil
+}
+// SignHandoff proves key possession to the internal pairing manager.
+func SignHandoff(private ed25519.PrivateKey,id string)[]byte{
+ return ed25519.Sign(private,[]byte(handoffDomain+id))
+}
+// Redeem requires the local agent to prove private-key possession. Approved
 // invitations are kept private in memory and never exposed by Get.
 func(m *Manager)Redeem(id string,proof []byte)(identity.Agent,error){
  m.mu.Lock();defer m.mu.Unlock()
