@@ -2,7 +2,6 @@ package pgpairing
 
 import(
  "context"
- "crypto/ed25519"
  "database/sql"
  "errors"
  "os"
