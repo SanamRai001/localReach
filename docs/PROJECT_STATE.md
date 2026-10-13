@@ -1,22 +1,26 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** One-install, simple and secure access to explicitly approved LAN device capabilities.
-**Active branch:** `feat/r1k-storage-ownership-harness`
-**Phase:** R1K.1 storage ownership gate (code written, tests not run).
-**Base:** `feat/r1j-reconciliation-hardening` (open PR #12), dependent on previous stacked PRs #1–#11. Main remains starter README, no merges/deployments.
+**Goal:** Secure one-install approved device capabilities over outbound-only connectivity.
+**Active branch:** `feat/r1k2-two-process-harness`
+**Phase:** R1K.2 independent local gateway and agent processes, code written.
+**Baseline:** `feat/r1k-storage-ownership-harness` (PR #13), stacked PRs #1–#12 open, main starter README. No merges/deployments.
 
 ## Changes
-- Existing R0–R1J: product/UX RFC, identity and signed challenges, TLS mock handler, single-writer broker and journal, mock outbound HTTPS delivery, reconnect polling, late-result reconciliation primitive.
-- R1K.1: `internal/ownership` creates an exclusive .owner sentinel with OS O_EXCL semantics. Journal and broker obtain it before opening storage, release it on clean close or open failure, and deny second writers.
-- Added unit/integration tests for double-open and clean reopen.
-- Added `docs/R1K_STORAGE_OWNERSHIP.md` with operational risks and next steps.
+- Retains prior R0–R1K.1 architecture/UX docs, Ed25519 identity, TLS mock gateway, durable broker, edge journal, outbound agent poller, late-result reconciliation primitive and fail-closed storage ownership sentinel.
+- Adds `cmd/localreach-lab` with gateway and agent modes. Gateway binds hardcoded `127.0.0.1:18787` and uses explicitly provided development TLS keypair; agent runs as a distinct OS process, verifies TLS certificate and establishes signed session to poll exactly one mock.ping command.
+- Adds `docs/R1K2_LAB.md` with PowerShell runbook, trust prerequisite, expected output and limits.
+- Adds .gitignore entry for `.localreach-lab/` credential/journal artifacts.
 
 ## Verification
-GitHub files published. No `go test ./...`, `go vet ./...`, race, process, WAN/CGNAT, installer, UX or hardware tests executed. Actual behavior is unverified.
+GitHub files published. **No Go test, vet, separate-process command run, real WAN/CGNAT, installer or physical-device test executed.** This is a runnable harness proposal, not a verified test outcome.
 
-## Risks
-Sentinels are not robust OS locks; crashed writers leave stale files, and manual deletion while a writer is alive breaks exclusivity. No automated stale recovery or repair. Existing fsynced event logs can fail closed on partial writes; no compaction or backup. This is still an in-process/httptest mock platform, not separately deployable secure networking. Identity persistence, admin auth, TLS channel binding, rate limiting, release signing, UX and actual discovery all remain incomplete.
+## Security and reliability gaps
+- Local test gateway only; never make its listener public. Identity is ephemeral and provisioning writes a test private key to disk; unsuitable for production deployment.
+- Ownership sentinel can remain after crashes; no automated safe recovery. No database transactions, journal repair, cross-node reliability or signed evidence verification.
+- No authenticated user admin enrollment, durable scope policy, channel-bound sessions, rate limits, certificate management, OS secure key store or production agent daemon.
+- No one-click installer/UX, real discovery or printer/attendance integration.
+- Restarting gateway with same directory fails on duplicated fixed command ID; lab reset procedures are not automatic.
 
 ## Next phase
-R1K.2 standalone gateway and agent local-process harness, explicit mock-only TLS trust and consolidated Go acceptance. Then build the first usable one-click installation prototype after security and network gates. Preserve the stacked PRs pending explicit merge authorization.
+Run consolidated Go test/vet acceptance plus local two-process lab after security review. Fix discovered defects before expanding to WAN or real devices. Then prioritize first safe onboarding and installer UX prototype.
