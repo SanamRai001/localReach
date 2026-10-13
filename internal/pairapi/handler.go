@@ -28,8 +28,10 @@ type Pairing interface{
  ResolveIdentity(context.Context,string,ed25519.PublicKey)(string,error)
  BeginResume(context.Context,string,string)(string,error)
  VerifyResume(context.Context,string,string,string,[]byte)error
+ IssueInvitation(context.Context,string,string,string)(pgpairing.Invitation,error)
+ RedeemInvitation(context.Context,string,string,ed25519.PublicKey)(pgpairing.Record,error)
 }
-type Handler struct{Auth Auth;Pairing Pairing}
+type Handler struct{Auth Auth;Pairing Pairing;Guard *Guard}
 type proposal struct {
  Organization string `json:"organization"`
  Site string `json:"site"`
@@ -44,6 +46,22 @@ type signedDecision struct {
  IssuedAt int64 `json:"issuedAt"`
  ExpiresAt int64 `json:"expiresAt"`
  Signature string `json:"signature"`
+}
+type invitationRequest struct{
+ Organization string `json:"organization"`
+ Site string `json:"site"`
+ Token string `json:"token"`
+ PublicKey string `json:"publicKey"`
+}
+type loginRequest struct{
+ Organization string `json:"organization"`
+ AdminID string `json:"adminId"`
+ Nonce string `json:"nonce"`
+ Signature string `json:"signature"`
+}
+type loginAuth interface{
+ Challenge(context.Context,string,string)(string,error)
+ Authenticate(context.Context,string,string,string,[]byte)(string,error)
 }
 type agentRequest struct{
  Organization string `json:"organization"`
@@ -99,6 +117,10 @@ func(h Handler)ServeHTTP(w http.ResponseWriter,r *http.Request){
  if r.Method!=http.MethodPost{http.Error(w,"method not allowed",http.StatusMethodNotAllowed);return}
  if h.Pairing==nil{http.Error(w,"unavailable",http.StatusServiceUnavailable);return}
  switch r.URL.Path{
+ case "/v1/control/login-challenge":h.loginChallenge(w,r)
+ case "/v1/control/login":h.login(w,r)
+ case "/v1/control/invite":h.invite(w,r)
+ case "/v1/agent/request-invite":h.redeemInvite(w,r)
  case "/v1/control/propose": h.propose(w,r)
  case "/v1/control/decide":h.decide(w,r)
  case "/v1/agent/enrollment-challenge":h.challenge(w,r)
@@ -175,3 +197,56 @@ type ServerConfig struct{ReadHeaderTimeout,ReadTimeout,WriteTimeout time.Duratio
 func RecommendedTimeouts()ServerConfig{return ServerConfig{
  ReadHeaderTimeout:5*time.Second,ReadTimeout:10*time.Second,WriteTimeout:10*time.Second,
 }}
+
+func(h Handler)limited(w http.ResponseWriter,r *http.Request)bool{
+ if h.Guard==nil||!h.Guard.Allow(r){http.Error(w,"request limit",http.StatusTooManyRequests);return false}
+ return true
+}
+// These login routes are for native clients with a PREPROVISIONED admin key,
+// not browser password login or self-registration. Admission is fail closed.
+func(h Handler)loginChallenge(w http.ResponseWriter,r *http.Request){
+ if !h.limited(w,r){return}
+ var p loginRequest
+ if !decode(w,r,&p){return}
+ auth,ok:=h.Auth.(loginAuth)
+ if !ok{denied(w);return}
+ nonce,err:=auth.Challenge(r.Context(),p.Organization,p.AdminID)
+ if err!=nil{denied(w);return}
+ respond(w,map[string]string{"nonce":nonce})
+}
+func(h Handler)login(w http.ResponseWriter,r *http.Request){
+ if !h.limited(w,r){return}
+ var p loginRequest
+ if !decode(w,r,&p){return}
+ auth,ok:=h.Auth.(loginAuth)
+ if !ok{denied(w);return}
+ signature,err:=decoded(p.Signature,ed25519.SignatureSize)
+ if err!=nil{denied(w);return}
+ token,err:=auth.Authenticate(r.Context(),p.Organization,p.AdminID,p.Nonce,signature)
+ if err!=nil{denied(w);return}
+ respond(w,map[string]string{"token":token,"expiresInSeconds":"300"})
+}
+func(h Handler)invite(w http.ResponseWriter,r *http.Request){
+ if !h.limited(w,r){return}
+ var p invitationRequest
+ if !decode(w,r,&p){return}
+ admin,ok:=h.admin(w,r,p.Organization)
+ if !ok{return}
+ invitation,err:=h.Pairing.IssueInvitation(r.Context(),p.Organization,p.Site,admin.AdminID)
+ if err!=nil{denied(w);return}
+ respond(w,map[string]string{
+  "token":invitation.Token,"site":invitation.Site,
+  "expiresAt":invitation.ExpiresAt.UTC().Format(time.RFC3339),
+  "scope":"PENDING_REQUEST_ONLY",
+ })
+}
+func(h Handler)redeemInvite(w http.ResponseWriter,r *http.Request){
+ if !h.limited(w,r){return}
+ var p invitationRequest
+ if !decode(w,r,&p){return}
+ public,err:=decoded(p.PublicKey,ed25519.PublicKeySize)
+ if err!=nil{denied(w);return}
+ record,err:=h.Pairing.RedeemInvitation(r.Context(),p.Organization,p.Token,ed25519.PublicKey(public))
+ if err!=nil{denied(w);return}
+ respond(w,map[string]string{"requestId":record.RequestID,"state":record.State})
+}
