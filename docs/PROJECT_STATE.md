@@ -1,32 +1,28 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, click Connect, and authorize strictly scoped LAN device capabilities.
-**Active branch:** `feat/r2i1-windows-dpapi-agent-identity`
-**Phase:** R2I.1 — Windows current-user DPAPI identity persistence and recovery.
-**Base:** `feat/r2h3-postgres-transactional-pairing` (PR #25). All upstream PRs #1–#25 remain open and stacked, no main merge/deploy.
+**Goal:** Install once, click Connect, authorize scoped LAN-only device access.
+**Current branch:** `feat/r2i2-macos-linux-secret-stores`
+**Phase:** R2I.2 native OS agent key storage foundation for Linux and macOS.
+**Base:** `feat/r2i1-windows-dpapi-agent-identity` (PR #26). All previous PRs #1–#26 remain open and stacked. No merge/deploy.
 
-## Verified baseline
-R2H.3 latest GitHub Actions run `38360284081` was green: Go test/vet/race and separate-process HTTPS mock smoke, plus transactional PostgreSQL pairing and scoped Ed25519 administrator login/session verification. No real WAN/hardware tests.
+## Previously verified
+R2I.1 latest CI `38363952211` succeeded for Windows DPAPI tests, Linux Go/vet/race and local TLS smoke, and PostgreSQL pairing/admin sessions. Does not verify WAN/hardware or installed service.
 
-## This phase
-- `internal/agentkeys` introduces explicit `Create` / `Load` of a per-user Ed25519 signing identity.
-- On Windows, secret bytes are encrypted with current-user scoped DPAPI and saved as a versioned, bounded encrypted payload in a local-profile `identity.dpapi` file. No plaintext file fallback, no machine-wide DPAPI scope.
-- On unsupported platforms, key creation/decryption fails closed. Linux and macOS native secure key stores are not yet implemented.
-- Identity is never returned as JSON or served to a browser; the trusted Go backend can access its public key, fingerprint and restricted native signing function. No automatic key regeneration after loss/corruption, nor automatic overwrites.
-- Added Windows runtime tests of DPAPI roundtrip, encryption tampering, restarts, identity stability, concurrent create refusal and corruption recovery. Existing Linux test rejects plaintext fallback.
-- Added a real `windows-latest` CI job for Windows DPAPI tests, Windows build and broader package tests.
-- `docs/R2I1_WINDOWS_DPAPI.md` details Windows user scope, ACL caveats, recovery limitations and next milestones.
+## R2I.2 changes
+- Refactored `internal/agentkeys` into common native identity/signing API and platform-specific persistence while preserving existing Windows current-user DPAPI.
+- Added Linux libsecret Secret Service provider via `/usr/bin/secret-tool` with secrets only on stdin/stdout; no plaintext filesystem or argv fallback, unsupported if desktop session service is absent.
+- Added macOS Security.framework Keychain generic-password credential provider via CGo; duplicate item denied and no plaintext CLI arguments. CGo-disabled macOS fails closed.
+- Linux/macOS persist only a small public reference marker (random ID, fingerprint, timestamp). A native secret is required for any key load. Creation uses exclusive marker creation; lost/corrupt secrets require explicit recovery.
+- Added mock-vault lifecycle tests for key stability, signing, concurrent enrollment, marker tampering, missing native secret and disabled backend; optional interactive real provider roundtrip.
+- Added macOS GitHub Actions compilation/testing and disabled-CGo check alongside existing Linux, Windows and PostgreSQL jobs.
+- `docs/R2I2_NATIVE_KEY_STORES.md` records platform support and limitations.
 
 ## Verification
-**R2I.1 verification GREEN**: GitHub Actions run `38363776961` passed all three jobs: Windows DPAPI runtime tests and Windows package tests, standard Go tests/vet/race/two-process TLS mock, and real PostgreSQL transactional pairing/auth tests. This is verification of the storage primitive under hosted Windows runner conditions, not production installation or cross-user credential recovery. A docs-only update triggers a follow-up CI run.
+**R2I.2 CI GREEN:** GitHub Actions run `38365609244` completed SUCCESS for Linux Go tests/vet/race/TLS mock, PostgreSQL integration, Windows DPAPI and package tests, and macOS native Security.framework CGo tests, full macOS packages, and disabled-CGo fail-closed fallback. macOS runner uses Go 1.25.x to address modern Mach-O LC_UUID linker compatibility; module language baseline stays Go 1.22. The verified test suite uses mock-vault lifecycle tests: it does NOT establish successful real macOS Keychain / Linux Secret Service operations on a user machine. A documentation-only follow-up will trigger fresh CI.
 
-## Remaining production gaps
-- No installed Windows background agent, actual pairing to the PostgreSQL backend, OS-safe user/key lifecycle or diagnostic UI.
-- Windows DPAPI under interactive user is not a machine-service-wide credential store. Windows service account selection, ACL/symlink hardening, signing-key revocation and rotation require design and tests.
-- Linux Keyring and macOS Keychain support remain unimplemented and cannot use a plaintext fallback.
-- User-supplied protocol messages must be domain-separated before signing; no unrestricted signer RPC or browser access.
-- No real login/SSO integration, public-safe gateway, WAN/CGNAT verification, capability grants, printers, attendance device adapters, installers or hardware testing.
+## Release blockers
+No real agent process/enrollment wireup, OS service-account policy, production code signing, key rotation/recovery UI, protected keychain permissions audit, headless Linux secret-store availability, user login/SSO or authorized device grants. No WAN/CGNAT/public relay, printer/attendance integration or signed installers.
 
 ## Next
-Verify Windows CI and fix any findings. Then R2I.2 native macOS/Linux secure credential backends, and R2I.3 agent enrollment/restore/rotation integration. Keep public listeners and hardware commands disabled.
+Verify CI, fix platform findings, then R2I.3 agent enrollment/lifecycle/recovery and R2J real pairing UX. Keep PRs unmerged until explicit approval.

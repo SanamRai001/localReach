@@ -69,3 +69,23 @@ jobs:
         run: go test -race -count=1 -v ./internal/agentkeys
       - name: Compile all Windows packages
         run: go test -count=1 ./...
+
+  macos-agent-key-storage:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          # Modern Apple dyld requires a toolchain with current Mach-O support.
+          # The module's Go 1.22 source compatibility remains unchanged.
+          go-version: '1.25.x'
+          cache: false
+      - name: macOS Security.framework and marker lifecycle tests
+        run: go test -race -count=1 -v ./internal/agentkeys
+      - name: Compile all macOS packages
+        run: go test -count=1 ./...
+      - name: Verify CGo-disabled keychain path fails closed
+        env:
+          CGO_ENABLED: '0'
+        run: go test -count=1 ./internal/agentkeys
