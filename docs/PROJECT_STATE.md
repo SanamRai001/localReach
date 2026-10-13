@@ -1,26 +1,27 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Secure one-install approved device capabilities over outbound-only connectivity.
-**Active branch:** `feat/r1k2-two-process-harness`
-**Phase:** R1K.2 independent local gateway and agent processes, code written.
-**Baseline:** `feat/r1k-storage-ownership-harness` (PR #13), stacked PRs #1–#12 open, main starter README. No merges/deployments.
+**Goal:** Secure one-install access to narrowly approved LAN-device operations.
+**Active branch:** `test/r1l-consolidated-acceptance`
+**Phase:** R1L Go verification automation and acceptance checkpoint.
+**Base:** `feat/r1k2-two-process-harness` (PR #14); PRs #1–#14 remain stacked and unmerged.
 
-## Changes
-- Retains prior R0–R1K.1 architecture/UX docs, Ed25519 identity, TLS mock gateway, durable broker, edge journal, outbound agent poller, late-result reconciliation primitive and fail-closed storage ownership sentinel.
-- Adds `cmd/localreach-lab` with gateway and agent modes. Gateway binds hardcoded `127.0.0.1:18787` and uses explicitly provided development TLS keypair; agent runs as a distinct OS process, verifies TLS certificate and establishes signed session to poll exactly one mock.ping command.
-- Adds `docs/R1K2_LAB.md` with PowerShell runbook, trust prerequisite, expected output and limits.
-- Adds .gitignore entry for `.localreach-lab/` credential/journal artifacts.
+## Added in R1L
+- `.github/workflows/go-verify.yml`: on pull requests and selected pushes, run Go package tests, Go vet, race detector and compile the two-process lab using Ubuntu GitHub Actions.
+- Verification jobs provide a durable pass/fail gate; source publication alone does not indicate passing tests.
 
-## Verification
-GitHub files published. **No Go test, vet, separate-process command run, real WAN/CGNAT, installer or physical-device test executed.** This is a runnable harness proposal, not a verified test outcome.
+## Earlier changes
+Architecture/UX spec; mock relay; Ed25519 identity; short-lived signed sessions; TLS test-only gateway; durable broker and edge journals; authenticated outbound mock command polling; replay, recovery and reconciliation logic; exclusive ownership sentinels; loopback gateway/agent two-process lab.
 
-## Security and reliability gaps
-- Local test gateway only; never make its listener public. Identity is ephemeral and provisioning writes a test private key to disk; unsuitable for production deployment.
-- Ownership sentinel can remain after crashes; no automated safe recovery. No database transactions, journal repair, cross-node reliability or signed evidence verification.
-- No authenticated user admin enrollment, durable scope policy, channel-bound sessions, rate limits, certificate management, OS secure key store or production agent daemon.
-- No one-click installer/UX, real discovery or printer/attendance integration.
-- Restarting gateway with same directory fails on duplicated fixed command ID; lab reset procedures are not automatic.
+## Verification status
+**UNKNOWN / NOT VERIFIED:** GitHub Actions execution and test outcomes have not yet been confirmed. A local git network checkout attempt failed because github.com could not be resolved, and the prior phases have not been runtime-tested in this environment. No two-process lab, WAN, real printer, attendance device, or installer usability gate executed.
 
-## Next phase
-Run consolidated Go test/vet acceptance plus local two-process lab after security review. Fix discovered defects before expanding to WAN or real devices. Then prioritize first safe onboarding and installer UX prototype.
+## Risks / limitations
+- Current lab is loopback only; test-only credentials and in-memory registry.
+- Gateway is not appropriate for public deployment; lacks full admin policy authorization, durable enrollment, bound sessions, rate limits and secure agent key storage.
+- Journal ownership sentinel lacks safe automated stale recovery; append journals lack repair/compaction.
+- Independent signed edge evidence and general safe reconciliation remain incomplete; no physical command allowed.
+- Missing one-click installer/discovery, real WAN/CGNAT verification and device adapters.
+
+## Next
+Read the actual GitHub Actions result, fix failures before progressing, then run the local two-process lab through a reproducible acceptance gate. Keep all PRs unmerged pending approval and do not expose the gateway.
