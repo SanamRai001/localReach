@@ -17,7 +17,7 @@ R2K.1 final CI `38389796103` SUCCESS: Linux Go/vet/race, PostgreSQL device disco
 - Security and state-flow unit tests with mocked native signer, remote backend and passive discovery. `docs/R2K1A_WORKING_SETUP_DASHBOARD.md` contains runnable commands and clear limitations.
 
 ## Verification
-New phase source pushed; **GitHub CI not yet verified**. Must pass unit/vet/race, PostgreSQL integration, Windows DPAPI, macOS Keychain, and browser JS syntax. Actual user Windows installation/UI click test remains to be performed; no live cloud gateway configured.
+**IMPLEMENTATION CI VERIFIED GREEN:** run `38395864149` SUCCESS on all four jobs: Linux Go unit/vet/race including dashboard origin/CSRF/status and real HTML/CSS/JS asset tests, explicit Node JavaScript syntax validation, disposable PostgreSQL pairing/permission/real separate-process TLS acceptance, Windows DPAPI/full package tests and macOS Keychain/full package tests. Actual user Windows UI clicks and local printer visibility remain for manual acceptance. This is not a deployed cloud gateway or WAN test. A subsequent documentation-only update triggers its own CI verification.
 
 ## Critical product limits
 Default dashboard runs locally without Postgres/cloud, but **cloud connection is disabled** until the operator deploys a trusted HTTPS service and independently provisions/approves a tenant and agent. No signed installer, automatic OS background service, public gateway, real two-network acceptance, hardware attestation, verified printer integration, attendance reader, printer command, raw TCP or generic tunnel. Browser labels all mDNS discovery fingerprints untrusted. All stacked PRs remain unmerged, no deployment.
