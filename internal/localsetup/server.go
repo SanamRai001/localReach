@@ -30,8 +30,10 @@ func Handler(site fs.FS, status func()localstatus.Snapshot)http.Handler{
    if r.Method!="GET"{http.Error(w,"read only",405);return}
    state.ServeHTTP(w,r);return
   }
-  if r.URL.Path=="/"{http.Redirect(w,r,"/index.html",http.StatusTemporaryRedirect);return}
-  if r.URL.Path!="/index.html"&&r.URL.Path!="/style.css"&&r.URL.Path!="/setup.js"{http.NotFound(w,r);return}
+  if r.URL.Path!="/"&&r.URL.Path!="/index.html"&&r.URL.Path!="/style.css"&&r.URL.Path!="/setup.js"{http.NotFound(w,r);return}
+  // Go FileServer canonicalizes /index.html to /. Serve it at the root
+  // rather than redirecting / to /index.html and forming a redirect loop.
+  if r.URL.Path=="/index.html"{r=r.Clone(r.Context());r.URL.Path="/"}
   files.ServeHTTP(w,r)
  })
 }
