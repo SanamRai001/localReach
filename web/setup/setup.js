@@ -25,3 +25,36 @@ function render(){
 next.addEventListener("click",()=>{index=(index+1)%3;render()});
 back.addEventListener("click",()=>{index=Math.max(0,index-1);render()});
 render();
+
+
+// An optional read-only status check. Static-file mode and absent agent
+// both report "Unavailable"; neither may be displayed as paired/online.
+async function readLocalStatus(){
+ const notice=document.createElement("div");
+ notice.className="notice";
+ const heading=document.createElement("strong");
+ heading.textContent="Live agent status";
+ const value=document.createElement("span");
+ value.textContent="Checking localhost status…";
+ notice.append(heading,value);
+ content.append(notice);
+ if(location.protocol==="file:"){
+  value.textContent="Unavailable: this is a static preview, not a running agent.";
+  return;
+ }
+ try{
+  const res=await fetch("/v1/local/status",{method:"GET",credentials:"omit",cache:"no-store"});
+  if(!res.ok)throw new Error("status unavailable");
+  const snapshot=await res.json();
+  if(!["RUNNING","STOPPED"].includes(snapshot.agent)||!["NOT_PAIRED","PENDING_APPROVAL","PAIRED","REVOKED","EXPIRED"].includes(snapshot.pairing))throw new Error("invalid status");
+  value.textContent="Agent: "+snapshot.agent+" · Pairing: "+snapshot.pairing+" · Connection: "+snapshot.connection+".";
+ }catch(_){
+  value.textContent="Unavailable: no trusted local agent status endpoint is connected.";
+ }
+}
+const oldRender=render;
+render=function(){
+ oldRender();
+ if(index===1){void readLocalStatus();}
+};
+render();
