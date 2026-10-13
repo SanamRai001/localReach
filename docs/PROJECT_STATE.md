@@ -19,7 +19,7 @@ R2I.1 latest CI `38363952211` succeeded for Windows DPAPI tests, Linux Go/vet/ra
 - `docs/R2I2_NATIVE_KEY_STORES.md` records platform support and limitations.
 
 ## Verification
-R2I.2 code pushed. **New CI results not yet verified**. Mock-vault tests do not establish successful real Keychain / Secret Service operations in an installed app.
+**R2I.2 CI GREEN:** GitHub Actions run `38365609244` completed SUCCESS for Linux Go tests/vet/race/TLS mock, PostgreSQL integration, Windows DPAPI and package tests, and macOS native Security.framework CGo tests, full macOS packages, and disabled-CGo fail-closed fallback. macOS runner uses Go 1.25.x to address modern Mach-O LC_UUID linker compatibility; module language baseline stays Go 1.22. The verified test suite uses mock-vault lifecycle tests: it does NOT establish successful real macOS Keychain / Linux Secret Service operations on a user machine. A documentation-only follow-up will trigger fresh CI.
 
 ## Release blockers
 No real agent process/enrollment wireup, OS service-account policy, production code signing, key rotation/recovery UI, protected keychain permissions audit, headless Linux secret-store availability, user login/SSO or authorized device grants. No WAN/CGNAT/public relay, printer/attendance integration or signed installers.
