@@ -27,3 +27,31 @@ jobs:
         run: go build -o /tmp/localreach-lab ./cmd/localreach-lab
       - name: Verify separate processes over TLS
         run: bash scripts/verify-two-process.sh
+
+  postgres-pairing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: localreach
+          POSTGRES_PASSWORD: localreach-ci-only
+          POSTGRES_DB: localreach_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U localreach -d localreach_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      LOCALREACH_TEST_POSTGRES_DSN: postgres://localreach:localreach-ci-only@127.0.0.1:5432/localreach_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Transactional PostgreSQL pairing tests
+        run: go test -race -p 1 -count=1 -v ./internal/pgpairing ./internal/pgauth

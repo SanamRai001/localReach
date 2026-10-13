@@ -1,34 +1,33 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, connect securely, and approve narrowly scoped local device capabilities.
-**Current branch:** `feat/r2h2-durable-pairing-lifecycle`
-**Phase:** R2H.2 prototype durable request/approval/enrollment/revocation lifecycle.
-**Base:** `feat/r2h-durable-admin-trust-ledger` (PR #23). All upstream PRs #1–#23 stacked/open; main not changed, no deployment.
+**Product:** LocalReach — simple, explicitly authorized outbound access to approved LAN-only devices.
+**Active branch:** `feat/r2h3-postgres-transactional-pairing`
+**Phase:** R2H.3 — PostgreSQL transactional pairing foundation.
+**Base:** `feat/r2h2-durable-pairing-lifecycle` (PR #24). Prior PRs stacked and unmerged; no deployment.
 
-## Verified baseline
+## Verified before this branch
 
-R2H.1 latest GitHub Actions run `38357488592` completed SUCCESS: Go tests, vet, race tests, lab compilation and local separate-process HTTPS mock smoke test. These do not prove production WAN or device capability access.
+R2H.2 final CI run `38358320876` completed SUCCESS. Earlier Go test/vet/race, local TLS separate-process mock smoke and pairing policy tests passed. No production WAN, installer, device or hardware verification.
 
-## R2H.2 changes
+## This branch
 
-- `internal/pairledger` persists scoped pairing proposals, admin decisions, enrolled identities and revocations in one bounded, fsynced hash-chained journal. Public keys only; no private keys, invitation tokens or device grants. A restart discards ephemeral one-use agent proof challenges.
-- `internal/pairpolicy.Controller` verifies signed, short-lived tenant/key-bound admin decisions using the previous persisted `admintrust` store and consumes nonces before recording a pairing decision. This is **fail-closed, not atomic across two journals**.
-- Tests for restart survival, signature possession, expired/unauthorized requests, one-time challenge/replay, corrupted log, concurrent requests and admin revocation.
-- `docs/R2H2_DURABLE_PAIRING.md` describes missing production security gates.
+- Added PostgreSQL migration `migrations/060_pairing_postgres.sql`: organizations/sites, tenant-scoped admin key and role membership, pairing requests, consumed signed nonces, challenge hashes, enrolled agent identities, revocation and audit.
+- Implemented `internal/pgpairing` `database/sql` path: authorized, signed, expiring admin decisions and nonce replay guard, pairing state and audit in **one PostgreSQL serializable transaction**. Approval no longer leaves a consumed nonce behind if its pairing/audit write fails.
+- Persistent challenge + agent-signed enrollment (same transaction for challenge consumption, agent identity and audit). Revocation updates pairing and agent registry together.
+- Real PostgreSQL integration tests cover rollback-injected audit failure, replay, concurrent decisions, scope/RBAC, restarts, enrollment and revocation.
+- Added disposable PostgreSQL 16 job to GitHub Actions and pinned PostgreSQL driver dependency.
+- Added `migrations/061_admin_sessions_postgres.sql` and `internal/pgauth`: Ed25519 admin-key challenge/response login, five-minute hashed persistent sessions, live role/organization checks, logout and login audit, including restart/replay/revocation tests.
+- `docs/R2H3_POSTGRES_PAIRING.md` documents contracts, test conditions and remaining security work.
 
 ## Verification
 
-R2H.2 code and tests passed GitHub Actions **run 38358204308** at commit `5d7c6216fd35c25cbc676b37a862282a31c3b885`: Go tests, vet, race detector, lab build, and two-process HTTPS mock smoke test. A documentation-only state update triggers a separate run. No real hardware, WAN, OS installer or public listener.
+**R2H.3 CI SUCCESS**: GitHub Actions run `38360139307` passed BOTH standard Go verification (unit/integration, vet, race, lab compilation, two-process mock HTTPS smoke) and real PostgreSQL integration tests covering pairing transactions and administrator key-login sessions. The PostgreSQL integration job uses `-p 1` because its isolated test packages reset the same disposable database; actual concurrent approval tests run within the database tests. A later documentation-only change will trigger a fresh CI run.
 
-## Crucial limitations
+## Scope and blockers
 
-- Still no actual authenticated administrator login/role verification; all public keys are trusted bootstrap data. No rate-limited externally authenticated pairing proposal service.
-- Existing `pairing.Manager` / `pairtransport` still use the previous in-memory pairing model. New persistent ledger is independently tested and not yet wired to an installed agent or UI.
-- File ownership is an O_EXCL sentinel, not a portable robust lock; no crash-safe recovery, compaction, multi-node operation or tamper-proof audit.
-- No single transaction between administrator nonce consumption and pairing decision. A crash may consume the nonce without recording an approval; fail closed.
-- No OS keychain, signed installer, discovery, device grants, real cross-network or hardware verification. Do not expose public gateway or allow physical effects.
+This is an isolated transactional backend, **not yet connected** to a live pairing UI, public server, agent service or device adapter. Bootstrap administrator public keys and role membership are stored in PostgreSQL and validated by signatures. New `pgauth` provides a real **key-based administrator authentication primitive** with scoped expiring sessions, but there is no password login, SSO, or integration with an authoritative external role provider; key/session services are not yet wired to an HTTP or UI workflow. Proposals need protected, rate-limited intake. No OS private-key vault, installer signing, real WAN/CGNAT connection, explicit capability grants or hardware acceptance. Production DB TLS/backup/migration/permissions and incident recovery remain outstanding.
 
 ## Next
 
-Verify and fix R2H.2 CI. Follow with transactional DB-backed identity/admin policy and durable pairing integration (R2H.3), protected native agent key storage (R2I), real pairing UX (R2J), and consent-based discovery. Keep PRs unmerged pending explicit permission.
+Proceed to R2I local OS key storage and safe agent identity recovery; integrate real tenant login, rate-limited pairing UX and capability grants before public/hardware work. Leave all PRs open until explicit merge approval.
