@@ -19,7 +19,7 @@ R2H.1 latest GitHub Actions run `38357488592` completed SUCCESS: Go tests, vet, 
 
 ## Verification
 
-New R2H.2 code committed; **CI not yet verified** as of this project-state entry. No real hardware, WAN, OS installer or public listener.
+R2H.2 code and tests passed GitHub Actions **run 38358204308** at commit `5d7c6216fd35c25cbc676b37a862282a31c3b885`: Go tests, vet, race detector, lab build, and two-process HTTPS mock smoke test. A documentation-only state update triggers a separate run. No real hardware, WAN, OS installer or public listener.
 
 ## Crucial limitations
 
