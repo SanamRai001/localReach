@@ -32,7 +32,7 @@ type Pairing interface{
  RedeemInvitation(context.Context,string,string,ed25519.PublicKey)(pgpairing.Record,error)
  ReviewRequest(context.Context,string,string)(pgpairing.Review,error)
 }
-type Handler struct{Auth Auth;Pairing Pairing;Guard *Guard;Admission Admission;Sessions Sessions;SessionInterval time.Duration}
+type Handler struct{Auth Auth;Pairing Pairing;Guard *Guard;Admission Admission;Sessions Sessions;ReadPolicy ReadGrantPolicy;SessionInterval time.Duration}
 type proposal struct {
  Organization string `json:"organization"`
  Site string `json:"site"`
