@@ -30,10 +30,12 @@ func integrationDB(t *testing.T)*sql.DB{
  t.Cleanup(func(){db.Close()})
  ctx,cancel:=context.WithTimeout(context.Background(),20*time.Second);defer cancel()
  if err=db.PingContext(ctx);err!=nil{t.Fatal(err)}
- migration,err:=os.ReadFile(filepath.Join("..","..","migrations","060_pairing_postgres.sql"))
- if err!=nil{t.Fatal(err)}
- if _,err=db.ExecContext(ctx,string(migration));err!=nil{t.Fatal(err)}
- if _,err=db.ExecContext(ctx,`TRUNCATE lr_pairing_audit,lr_agents,lr_pairing_challenges,lr_decision_nonces,lr_pairings,lr_admin_keys,lr_sites,lr_organizations CASCADE`);err!=nil{t.Fatal(err)}
+ for _,migrationName:=range []string{"060_pairing_postgres.sql","062_agent_resume.sql"}{
+  migration,readErr:=os.ReadFile(filepath.Join("..","..","migrations",migrationName))
+  if readErr!=nil{t.Fatal(readErr)}
+  if _,err=db.ExecContext(ctx,string(migration));err!=nil{t.Fatal(err)}
+ }
+ if _,err=db.ExecContext(ctx,`TRUNCATE lr_agent_identity_audit,lr_agent_resume_challenges,lr_pairing_audit,lr_agents,lr_pairing_challenges,lr_decision_nonces,lr_pairings,lr_admin_keys,lr_sites,lr_organizations CASCADE`);err!=nil{t.Fatal(err)}
  return db
 }
 func keys(t *testing.T)(ed25519.PublicKey,ed25519.PrivateKey){
