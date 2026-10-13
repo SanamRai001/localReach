@@ -17,7 +17,7 @@ R2G full GitHub Actions verification passed on latest baseline SHA `0f027e3a69b1
 - `docs/R2H_DURABLE_ADMIN_TRUST.md` details assumptions, limitations and next steps.
 
 ## Verification
-R2H changes authored and published; **R2H CI result not yet confirmed**. Previous R2G baseline passed. No new release, desktop app, internet deployment or hardware acceptance.
+R2H changes authored and published; **R2H CI verified green** for commit `d5dc260990e64986248c6a10700ebfa5979102b9`, run `38357367366`: unit/integration, vet, race tests, lab build and separate-process HTTPS smoke test. The resulting documentation-only update will be checked separately. No new release, desktop app, internet deployment or hardware acceptance.
 
 ## Security and remaining architectural gaps
 - Admin public keys are provisioned and revoked by trusted in-process calls, not authenticated operator/admin services. Signatures do not themselves prove current tenant-admin membership.
@@ -27,4 +27,4 @@ R2H changes authored and published; **R2H CI result not yet confirmed**. Previou
 - No public-safe gateway, real WAN/CGNAT verification, signed installer, discovery or printer/attendance adapter.
 
 ## Next
-Verify R2H CI and correct failures; finish durable transactional pairing/identity and real administrator authentication (R2H.2), followed by protected desktop agent identity (R2I). Keep public/device operations disabled pending independent acceptance.
+Proceed with durable transactional pairing/identity and real administrator authentication (R2H.2), followed by protected desktop agent identity (R2I). Keep public/device operations disabled pending independent acceptance.
