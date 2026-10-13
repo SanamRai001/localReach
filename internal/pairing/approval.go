@@ -14,6 +14,7 @@ import (
  "github.com/SanamRai001/localReach/internal/identity"
 )
 var ErrDenied=errors.New("pairing denied")
+const handoffDomain="localreach/pairing/handoff/v1:"
 type State string
 const (Pending State="PENDING_APPROVAL";Approved State="APPROVED";Rejected State="REJECTED";Expired State="EXPIRED";Enrolled State="ENROLLED")
 type Request struct{
@@ -64,6 +65,21 @@ func(m *Manager)Decide(id,tenant string,authorized bool,approve bool)(Request,er
  }else{rec.request.State=Rejected}
  m.requests[id]=rec
  return copyRequest(rec.request),nil
+}
+// InvitationForAgent releases a short-lived approved invitation only to the
+// holder of the originally proposed Ed25519 key. The random request ID is
+// signed with domain separation. Caller MUST use confidential authenticated
+// transport; no HTTP endpoint is exposed in this phase.
+func(m *Manager)InvitationForAgent(id string,signature []byte)(string,error){
+ m.mu.Lock();defer m.mu.Unlock()
+ rec,ok:=m.requests[id]
+ if !ok||rec.request.State!=Approved||!m.now().Before(rec.request.ExpiresAt)||len(signature)!=ed25519.SignatureSize||rec.invitation==""{return "",ErrDenied}
+ if !ed25519.Verify(rec.request.PublicKey,[]byte(handoffDomain+id),signature){return "",ErrDenied}
+ return rec.invitation,nil
+}
+// SignHandoff proves key possession to the internal pairing manager.
+func SignHandoff(private ed25519.PrivateKey,id string)[]byte{
+ return ed25519.Sign(private,[]byte(handoffDomain+id))
 }
 // Redeem requires the local agent to prove private-key possession. Approved
 // invitations are kept private in memory and never exposed by Get.

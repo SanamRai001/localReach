@@ -1,19 +1,26 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, securely connect approved LAN device capabilities.
-**Active branch:** `feat/r2e-admin-pairing-approval`
-**Phase:** R2E tenant-scoped pairing approval policy primitive (not end-to-end pairing).
-**Base:** `feat/r2d-loopback-setup-service` PR #19; upstream PRs #1–#18 open. No merge/deploy.
+**Goal:** Install once, click Connect, and authorize only approved local-device capabilities.
+**Active branch:** `feat/r2f-proof-bound-pairing-handoff`
+**Phase:** R2F approved invitation handoff, internal primitive.
+**Base:** `feat/r2e-admin-pairing-approval` (PR #20); PRs #1–#20 remain stacked and unmerged. No deployment.
 
-## Implemented
-R0–R2D architecture and UX docs, identity and signed sessions, mock HTTPS command transport, crash-aware journals, reconnection, loopback status and setup UI. R2E adds `internal/pairing` with pending/rejected/approved/expired/enrolled state checks, tenant-scoped independently authorized admin decisions, one-time invitation issuance only after approval, and tests for denied unauthorized/cross-tenant and expired approvals.
+## Verified history
+Prior R1L Go CI tests, vet, race and lab compilation succeeded. R2A two-process loopback HTTPS smoke CI succeeded. Neither verifies internet connectivity, UI pairing nor physical devices.
 
-## Verified baseline
-Prior CI Go tests/vet/race/build passed and two-process mock loopback HTTPS test passed. R2E CI not confirmed; new Go tests not run here.
+## New R2F work
+- `internal/pairing.Manager.InvitationForAgent` makes the invitation obtainable after approval only when a candidate demonstrates possession of its originally submitted Ed25519 private key by signing the random request ID under an independent domain separator.
+- `SignHandoff` client helper for signed proof.
+- The returned invitation remains one-time at the registry enrollment boundary; the agent signs the invitation with the existing identity proof and Redeem consumes it atomically within the in-memory registry.
+- Added tests for unapproved/wrong-key handoff denial, successful approval/enrollment, wrong-key enrollment, replay rejection and expiry.
+- `docs/R2F_PAIRING_HANDOFF.md` specifies security assumptions and remaining work.
 
-## Blocking limitations
-R2E is **not usable pairing**: identity token is hidden and no secure agent delivery exists; no authenticated admin HTTP route, persistent approvals, safe OS key storage or independent signed agent consent. No capabilities granted. Local setup UI remains NOT_PAIRED/OFFLINE. Browser status is not linked to a real installed agent. No public-safe WAN service, hardware, signed installer or discovery. In-memory pairing and identity stores restart empty.
+## Verification
+GitHub source committed; **R2F CI result not yet confirmed**. No user manual tests requested.
+
+## Security limitations
+The pairing manager is not an authenticated service: its authorization boolean is trusted input, not real user login/role verification. No actual HTTPS invitation transfer, secure OS key vault, durable approval/audit, tenant admin policy, transport binding, rate limits, browser pairing, or capability grants. No public networking, hardware or installer integration. The current setup UI must continue to show NOT_PAIRED until a real authenticated status exists.
 
 ## Next
-Verify R2E CI; design a durable tenant-admin identity/authorization interface and secure one-time invitation transfer, with independently approved capabilities. Do not expose pairing endpoints publicly or use hardware until end-to-end security gates pass.
+Verify R2F CI; implement separately authenticated tenant-admin decision grants and a confidential authenticated invitation delivery endpoint with abuse resistance, then durable state and a real agent key store. Keep public listeners and physical commands disabled until security review and integration acceptance.
