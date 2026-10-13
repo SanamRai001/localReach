@@ -18,7 +18,7 @@ R2I.2 latest GitHub Actions run `38365823738` completed SUCCESS: Linux Go unit/v
 - `docs/R2I3_AGENT_BINDING.md` documents explicit recovery/rotation policy and missing service wiring.
 
 ## Verification
-R2I.3 source and tests committed, **R2I.3 CI not yet confirmed**. PostgreSQL CI now includes `internal/agentlifecycle` alongside pairing and login packages.
+**R2I.3 CI VERIFIED GREEN:** GitHub Actions run `38367233351` completed SUCCESS across Linux Go unit/vet/race + separate-process HTTPS mock, PostgreSQL pairing/login/native-coordinator integration, Windows DPAPI + full package tests, and macOS Security.framework CGo + full package tests + disabled-CGo fail-closed fallback. The preceding build failure was an unused test import and was corrected. PostgreSQL CI includes `internal/agentlifecycle` alongside pairing and login packages. A subsequent documentation-only update may trigger its own run.
 
 ## Security / product limitations
 This coordinator is a **server-side in-process integration contract**, not an installed native agent calling a real HTTPS API. Database credentials must NEVER ship in the desktop app. No network pairing API, rate-limited ingress, authenticated cloud agent transport, active signed device sessions, revocation fanout, OS-native reset/rotation UI, installer, capability grants, discovery, cloud relay or physical hardware usage. Successful resume proof is NOT a device grant or ONLINE status.
