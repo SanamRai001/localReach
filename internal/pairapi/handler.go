@@ -127,6 +127,7 @@ func(h Handler)ServeHTTP(w http.ResponseWriter,r *http.Request){
  case "/v1/control/login":h.login(w,r)
  case "/v1/control/invite":h.invite(w,r)
  case "/v1/control/review":h.review(w,r)
+ case "/v1/control/device-read-decision":h.decideDeviceRead(w,r)
  case "/v1/agent/request-invite":h.redeemInvite(w,r)
  case "/v1/control/propose": h.propose(w,r)
  case "/v1/control/decide":h.decide(w,r)
