@@ -4,7 +4,6 @@ import (
  "context"
  "crypto/ed25519"
  "crypto/rand"
- "errors"
  "net/http"
  "net/http/httptest"
  "path/filepath"
@@ -55,6 +54,22 @@ func TestRejectPlaintextAndPreventDuplicateExecution(t *testing.T){
  if e=j.Finish("repeat",journal.Succeeded,"pong");e!=nil{t.Fatal(e)}
  worker:=Agent{Identity:integration.Client{HTTP:tls.Client(),BaseURL:tls.URL,AgentID:agent.ID,PrivateKey:key},Journal:j}
  claimed,e:=worker.PollOnce(context.Background())
- if !claimed||!errors.Is(e,journal.ErrConflict){t.Fatalf("duplicate wasn't blocked: %v %v",claimed,e)}
- cloud,_:=b.Get("repeat","tenant-a");if cloud.State!=broker.Leased{t.Fatal(cloud)}
+ if !claimed||e!=nil{t.Fatalf("durable result reconciliation failed: %v %v",claimed,e)}
+ cloud,_:=b.Get("repeat","tenant-a");if cloud.State!=broker.Succeeded{t.Fatal(cloud)}
+ edge,_:=j.Get("repeat");if edge.State!=journal.Succeeded{t.Fatal(edge)}
+}
+
+func TestPreexistingEdgeIntentQuarantined(t *testing.T){
+ server,b,agent,key:=setup(t)
+ tls:=httptest.NewTLSServer(New(server));defer tls.Close()
+ j,e:=journal.Open(filepath.Join(t.TempDir(),"edge.log"),1<<20);if e!=nil{t.Fatal(e)};defer j.Close()
+ if e=b.Submit("uncertain","tenant-a",agent.ID);e!=nil{t.Fatal(e)}
+ if e=j.Submit("uncertain","mock.ping");e!=nil{t.Fatal(e)}
+ worker:=Agent{Identity:integration.Client{HTTP:tls.Client(),BaseURL:tls.URL,AgentID:agent.ID,PrivateKey:key},Journal:j}
+ handled,e:=worker.PollOnce(context.Background())
+ if e!=nil||!handled{t.Fatalf("quarantine: handled %v, err %v",handled,e)}
+ cloud,_:=b.Get("uncertain","tenant-a")
+ if cloud.State!=broker.Indeterminate{t.Fatalf("uncertain work was not quarantined: %+v",cloud)}
+ edge,_:=j.Get("uncertain")
+ if edge.State!=journal.Queued{t.Fatalf("existing edge record mutated: %+v",edge)}
 }
