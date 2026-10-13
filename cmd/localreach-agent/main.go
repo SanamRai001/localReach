@@ -1,5 +1,5 @@
 // LocalReach native agent prototype. Start manually; NOT an installed service.
-// No device discovery, printer/attendance commands or public listener.
+// Passive local discovery only; no printer/attendance commands or public listener.
 package main
 
 import(
@@ -60,7 +60,7 @@ func run(ctx context.Context,args []string)error{
   if err!=nil{return fmt.Errorf("passive discovery unavailable: %w",err)}
   if len(items)==0{fmt.Println("No announcements observed; this does not mean no printers exist.");return nil}
   for _,d:=range items{
-   fmt.Printf("%s | %s | fingerprint %s | UNVERIFIED mDNS hint\\n",d.Type,d.Name,d.Fingerprint)
+   fmt.Printf("%s | %s | fingerprint %s | UNVERIFIED mDNS hint\n",d.Type,d.Name,d.Fingerprint)
   }
   fmt.Println("No candidates were contacted, authorized or shared with the cloud.")
   return nil
