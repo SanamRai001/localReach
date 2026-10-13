@@ -9,7 +9,7 @@ The workflow is now:
 1. An organization administrator already provisioned with an Ed25519 key performs a **signed** login challenge. The backend issues a five-minute, hashed, revocable session.
 2. The authenticated OWNER/ADMIN uses `POST /v1/control/invite` with organization and site. The backend verifies the live role again, writes a short-lived, cryptographically random **256-bit one-use invitation** (hash only in PostgreSQL) and an audit row. It returns the secret once, and only through the authenticated TLS response.
 3. The prospective agent explicitly creates its signing key in the OS vault, runs `localreach-agent request`, and pastes the short-lived invitation **via standard input**, not an argument or environment variable. `/v1/agent/request-invite` checks the token and inviter's continuing authorization, then creates a **PENDING** proposal and consumes the invitation in one serializable PostgreSQL transaction with audit.
-4. The administrator independently inspects the proposed **public-key fingerprint** and signs a separate decision through the existing protected `/v1/control/decide` route. A stolen invitation **must never** result in automatic approval.
+4. The administrator uses authenticated `POST /v1/control/review` to inspect the proposed public-key SHA-256 **fingerprint**, site, status, and expiry. The administrator must compare that fingerprint out-of-band with the agent owner before signing a separate decision through the existing protected `/v1/control/decide` route. A stolen invitation **must never** result in automatic approval.
 5. Only after approval can the agent run `localreach-agent enroll`, prove possession of the same key via one-use Ed25519 enrollment challenge, and later use `serve` to check signed identity status. A successful proof still means `OFFLINE` cloud command connection, zero device grants.
 
 ### HTTP API added
@@ -17,6 +17,7 @@ The workflow is now:
 - `POST /v1/control/login-challenge` — native admin-client key login challenge
 - `POST /v1/control/login` — 64-byte Ed25519 proof yields five-minute hashed session
 - `POST /v1/control/invite` — preauthorized OWNER/ADMIN bearer, creates one-use invitation
+- `POST /v1/control/review` — preauthorized OWNER/ADMIN bearer, read-only candidate fingerprint and pending status
 - `POST /v1/agent/request-invite` — token plus agent **public** key creates pending proposal
 
 Existing `propose`, signed `decide`, `enrollment-challenge`, `enroll`, `resume-challenge` and `resume-verify` routes remain unchanged. All network handlers reject plaintext, browser Origin/Cookie, unrecognized methods and oversized input. The new login/invitation routes **fail closed** without an explicitly constructed `pairapi.Guard`: a bounded, single-process limiter allowing up to five admissions/minute per directly observed peer IP. It deliberately ignores spoofable `X-Forwarded-For`. **This is not sufficient for public ingress**, multi-replica gateways, proxy-aware per-user throttling, denial-of-service defense or application-layer abuse.
@@ -56,7 +57,7 @@ The administrator key must still be securely provisioned out of band. There is *
 Go/PostgreSQL tests include:
 - Invite issuance only by live active OWNER/ADMIN; blocked organization, revoked administrator, viewer, invalid/expired code, cross-tenant redemption and replay all denied
 - Competing invitation redemptions: **exactly one pending proposal**
-- Full HTTPS signed admin login → one-time invitation → pending proposal → **separate signed approval** → Ed25519 native enrollment and recovery
+- Full HTTPS signed admin login → one-time invitation → pending proposal → **authenticated public-key fingerprint review** → separate signed approval → Ed25519 native enrollment and recovery
 - Wrong/bad token denial; per-peer admission guard cannot be bypassed with an attacker-controlled forwarded-for header
 - Operator control-plane rejects remote plaintext database connections, absent TLS identity, unexpected command-line parameters and non-loopback listeners
 - Linux/Windows/macOS compilation, PostgreSQL, native vault and prior local mock TLS checks preserved in CI
