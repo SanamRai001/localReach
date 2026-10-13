@@ -1,26 +1,22 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Secure, one-install access to approved LAN-only device operations.
-**Active branch:** `feat/r1j-reconciliation-hardening`
-**Phase:** R1J narrow late-outcome reconciliation and request parser fix.
-**Baseline:** `feat/r1i-reconciliation-runner` PR #11; upstream PRs #1–#10 remain open. Main has starter README only; no merges or deployments.
+**Goal:** One-install, simple and secure access to explicitly approved LAN device capabilities.
+**Active branch:** `feat/r1k-storage-ownership-harness`
+**Phase:** R1K.1 storage ownership gate (code written, tests not run).
+**Base:** `feat/r1j-reconciliation-hardening` (open PR #12), dependent on previous stacked PRs #1–#11. Main remains starter README, no merges/deployments.
 
 ## Changes
-- Previous R0–R1I: UX and architecture docs; mock command broker; Ed25519 enrollment; TLS session test handler; edge journal; outbound HTTPS mock agent; reconnect polling.
-- R1J: corrected gateway trailing/malformed JSON detection.
-- Added broker `ReconcileObservedResult` for only an expired RECEIVED→INDETERMINATE command, restricted to its existing tenant/agent/original lease and final observed state. Added scope/rewrite tests.
-- Documented that this is only an internal primitive: **no evidence verification or public reconciliation endpoint**; see `docs/R1J_RECONCILIATION.md`.
+- Existing R0–R1J: product/UX RFC, identity and signed challenges, TLS mock handler, single-writer broker and journal, mock outbound HTTPS delivery, reconnect polling, late-result reconciliation primitive.
+- R1K.1: `internal/ownership` creates an exclusive .owner sentinel with OS O_EXCL semantics. Journal and broker obtain it before opening storage, release it on clean close or open failure, and deny second writers.
+- Added unit/integration tests for double-open and clean reopen.
+- Added `docs/R1K_STORAGE_OWNERSHIP.md` with operational risks and next steps.
 
 ## Verification
-Files pushed to GitHub. **Go tests/vet/race, multi-process, real-network, CGNAT, hardware and installer/UX tests not run**. Source code publication is not runtime verification.
+GitHub files published. No `go test ./...`, `go vet ./...`, race, process, WAN/CGNAT, installer, UX or hardware tests executed. Actual behavior is unverified.
 
-## Security and reliability risks
-- Lease token alone does not prove physical outcome. The new method must be invoked only behind independent evidence validation, which is not yet implemented.
-- Agent poller does not perform late-result reconciliation; no durable signed edge evidence.
-- Single-writer file stores have no OS locks, partial-write recovery or compaction.
-- No durable authenticated workspace-admin enrollment, TLS-channel identity binding, rate limits or public-safe listener.
-- No actual one-click installation/discovery or physical device capability. No deployment.
+## Risks
+Sentinels are not robust OS locks; crashed writers leave stale files, and manual deletion while a writer is alive breaks exclusivity. No automated stale recovery or repair. Existing fsynced event logs can fail closed on partial writes; no compaction or backup. This is still an in-process/httptest mock platform, not separately deployable secure networking. Identity persistence, admin auth, TLS channel binding, rate limiting, release signing, UX and actual discovery all remain incomplete.
 
 ## Next phase
-Prioritize cross-process storage safety and a reproducible separate-process TLS test harness, followed by authenticated evidence reconciliation and consolidated Go verification. Keep real hardware and public exposure disabled until required security gates pass.
+R1K.2 standalone gateway and agent local-process harness, explicit mock-only TLS trust and consolidated Go acceptance. Then build the first usable one-click installation prototype after security and network gates. Preserve the stacked PRs pending explicit merge authorization.
