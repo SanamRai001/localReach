@@ -38,8 +38,13 @@ func message(d AdminDecision)[]byte{
  return []byte(adminDomain+part(d.Organization)+part(d.RequestID)+part(d.AdminID)+part(string(d.Action))+part(d.Nonce)+strconv.FormatInt(d.IssuedAt,10)+":"+strconv.FormatInt(d.ExpiresAt,10))
 }
 func SignDecision(priv ed25519.PrivateKey,d AdminDecision)[]byte{return ed25519.Sign(priv,message(d))}
+// EnrollmentMessage is the exact domain-separated server-verifiable proof.
+// Native signers should sign these bytes, never an arbitrary remote message.
+func EnrollmentMessage(org,id,nonce string)[]byte{
+ return []byte(enrollDomain+part(org)+part(id)+part(nonce))
+}
 func SignEnrollment(priv ed25519.PrivateKey,org,id,nonce string)[]byte{
- return ed25519.Sign(priv,[]byte(enrollDomain+part(org)+part(id)+part(nonce)))
+ return ed25519.Sign(priv,EnrollmentMessage(org,id,nonce))
 }
 type Record struct{
  Organization string
