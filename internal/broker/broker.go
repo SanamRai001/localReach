@@ -127,6 +127,19 @@ func(b *Broker)Reconcile()error{
  }
  return nil
 }
+// ReconcileObservedResult accepts a late result only for the exact tenant,
+// agent and original lease of an already timed-out RECEIVED command.
+// A late terminal observation is NOT proof of a physical effect by itself:
+// trusted callers must verify independent authenticated edge evidence.
+func(b *Broker)ReconcileObservedResult(id,tenant,agent,lease string,state State,result string)error{
+ b.mu.Lock();defer b.mu.Unlock()
+ c,ok:=b.jobs[id]
+ if !ok||c.Tenant!=tenant||c.Agent!=agent||c.Lease==""||c.Lease!=lease||c.State!=Indeterminate{return ErrConflict}
+ if c.Result!="execution outcome unknown" {return ErrConflict}
+ if state!=Succeeded&&state!=Failed||len(result)>1024{return ErrConflict}
+ c.State=state;c.Result=result
+ return b.persist(c)
+}
 func(b *Broker)Get(id,tenant string)(Command,bool){
  b.mu.Lock();defer b.mu.Unlock()
  c,ok:=b.jobs[id]
