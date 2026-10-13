@@ -8,12 +8,10 @@ import (
  "sync"
  "time"
 
+ "github.com/SanamRai001/localReach/internal/agentremote"
  "github.com/SanamRai001/localReach/internal/localstatus"
 )
-type Signer interface{
- PublicKey()ed25519.PublicKey
- SignMessage([]byte)([]byte,error)
-}
+type Signer = agentremote.Signer
 type Verifier interface{
  VerifyIdentity(context.Context,string,Signer)(string,error)
 }
