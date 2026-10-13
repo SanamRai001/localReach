@@ -1,27 +1,28 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, approve securely and access only explicitly authorized LAN-only device capabilities.
-**Current branch:** `feat/r2j2-local-agent-verification`
-**Phase:** R2J.2 — manually runnable native agent, live HTTPS identity proof and read-only local status.
-**Base:** `feat/r2j1-https-pairing-control-plane` (PR #29). Prior PRs #1–#29 remain open and stacked; main unchanged. Nothing deployed.
+**Goal:** Install once, connect securely, authorize narrowly scoped LAN-only capabilities without router setup.
+**Current branch:** `feat/r2j3-invitation-control-plane`
+**Phase:** R2J.3 initial operator-only invitation/control-plane slice.
+**Base:** `feat/r2j2-local-agent-verification` (PR #30). Prior PRs #1–#30 open and unmerged; main unchanged, no deployment.
 
 ## Verified baseline
-R2J.1 latest CI run `38369735674` SUCCESS across Linux Go unit/vet/race and mock TLS two-process smoke, real PostgreSQL pairing/TLS tests, Windows native DPAPI/full packages and macOS Keychain/full packages/fallback. No actual installed service or publicly deployed cloud control plane.
+R2J.2 latest CI run `38374321624` completed SUCCESS across Linux Go unit/vet/race, two-process mock TLS, PostgreSQL pairing integration, Windows DPAPI and macOS Keychain/native binaries. No installed service, deployed public gateway or real hardware.
 
-## New R2J.2 code
-- `cmd/localreach-agent` adds manual native `init`, `enroll` and `serve` commands. `init` explicitly creates an OS-protected user-scoped Ed25519 identity and prints only public information. `enroll` requires a separately admin-approved request and a trusted HTTPS control-plane URL. `serve` loads an existing identity only, performs outbound identity verification, and runs the read-only localhost setup page. No plaintext keys, database credentials or device permissions.
-- `internal/agentservice.Monitor` verifies identity immediately and periodically against `agentremote.Client.VerifyIdentity`, with a max 90-second recent-proof window. It reports PAIRED only when recently server verified; failure or expiry becomes UNVERIFIED. Cloud connection stays OFFLINE and devices NOT_DISCOVERED because a proof is not an online session.
-- `internal/localstatus.Snapshot` adds explicit verification freshness and lastVerifiedAt UTC fields; no mutation endpoints. `localsetup.ServeContext` supports cancelable loopback-only HTTP, strict Host, peer address, and Origin guards.
-- `web/setup/setup.js` displays identity proof accurately and never suggests device connectivity/permissions from a status GET.
-- Added monitor/local handler tests, CLI fail-closed command tests and cross-platform native diagnostic binary compilation. `docs/R2J2_LOCAL_AGENT.md` provides explicit user instructions and limits.
+## This branch
+- `migrations/063_pairing_invitations.sql`: tenant/site-scoped 256-bit random invitation codes stored only as hashes, strict one-time redemption, 10-minute expiry, issuer scope, pending-request reference and audit.
+- `internal/pgpairing`: atomic issue (live OWNER/ADMIN checked in SQL) and one-time redeem that produces **PENDING** request only, retaining separate signed approval.
+- `internal/pairapi`: guarded HTTPS-native administrator key login, invite issue, invitation redemption, and independently authenticated fingerprint review before approval. Role-bound `pgauth` bearer and separately signed decision remain required to approve. Fail-closed bounded local per-peer admission guard on new routes, no browser-origin access.
+- `internal/agentremote.Client.RequestInvitation` and native `localreach-agent request`: existing OS-protected identity submits only its public key and short-lived secret read over stdin (never CLI argv); prints pending ID, not approval.
+- `cmd/localreach-control`: **loopback-only** (127.0.0.1:19443) manually runnable TLS service requiring explicit operator certificate/key and PostgreSQL DSN, with `verify-full` by default. Only an explicitly authorized local `localreach_test` database may use opt-in plaintext PostgreSQL.
+- PostgreSQL invitation concurrency, expiry, scope, admin revocation and replay tests; HTTPS login→invite→pending→fingerprint review→signed approval→enrollment tests; limiter and operator config negative tests.
+- `docs/R2J3_INVITATION_CONTROL.md` documents developer-local commands and release blockers.
 
 ## Verification
-**R2J.2 implementation CI VERIFIED GREEN**: GitHub Actions run `38374087799` concluded SUCCESS for Linux Go unit/vet/race, native diagnostic agent build, local two-process TLS smoke, disposable PostgreSQL pairing integration, Windows DPAPI/native agent/full package build, and macOS Keychain/native agent/full package build. This validates code and local mocks, not installation on a customer device, production gateway or a live WAN relay. A subsequent documentation-only update triggers another CI run.
+**R2J.3 implementation CI VERIFIED GREEN**: GitHub Actions run `38376891945` concluded SUCCESS on the final code + fingerprint-review changes: Linux unit/vet/race and local HTTPS smoke, disposable PostgreSQL invitation/role/replay/concurrency/TLS workflow, Windows DPAPI/full packages/control-plane build, and macOS Keychain/full packages/control-plane build. An ensuing documentation-only update will cause a separate CI run. There was no Internet ingress, installed service, signed end-user release, WAN/CGNAT or physical device acceptance.
 
-## Remaining production blockers
-No signed installer/autostart service, actual deployed authenticated TLS control-plane, administrator consent and invitation UI, multi-tenant abuse rate limits, persistent authorized cloud command session, WAN/CGNAT acceptance, device grants/discovery/printer or attendance drivers, production OS service accounts, native vault live acceptance and recovery/rotation UI. An ephemeral successful identity proof is NOT an online cloud relay session.
-The native diagnostic agent is manually runnable from the repo and fails closed when the key vault is unavailable; no production packaging or device command permissions exist.
+## Explicit remaining limitations
+Invitation does **not** authorize pairing or device permissions. Admin public-key provisioning remains operator-managed and is not a consumer SSO/login portal. Control plane is localhost only, so it is not reachable from a remote agent over the Internet. No distributed throttling, authenticated remote proxy, certificate automation, OS service/installer, persistent active relay session, truthful ONLINE signal, real WAN/CGNAT tests, or explicit device grants. No printers/attendance hardware access. Do NOT expose via public port or proxy.
 
 ## Next
-Verify R2J.2 CI and resolve code/OS failures. Then R2J.3 hardened operator-hosted pairing service and trusted invitation/user UX, followed by R2K scoped device discovery and capability grants. Do not merge/deploy without explicit approval.
+Confirm CI. R2J.4 true hardened cloud control plane + human approval workflow, then R2K separately authorized capability grants and read-only discovery. Merge and deployment require explicit approval.

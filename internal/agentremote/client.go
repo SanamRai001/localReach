@@ -90,3 +90,20 @@ func(c Client)VerifyIdentity(ctx context.Context,org string,s Signer)(string,err
  },&state);err!=nil||state.Result!="IDENTITY_VERIFIED"||state.Connection!="OFFLINE"||state.Capabilities!="NONE"{return "",ErrDenied}
  return challenge.AgentID,nil
 }
+
+// RequestInvitation submits an existing native *public key* with a short-lived
+// admin-issued secret. The token only authorizes a PENDING proposal. It never
+// approves the pairing, authenticates as an admin, or grants device access.
+// The token must be supplied from a protected UI/stdin, not a CLI argument.
+func(c Client)RequestInvitation(ctx context.Context,org,token string,s Signer)(string,error){
+ if !validSigner(s)||org==""||token==""{return "",ErrDenied}
+ var response struct{
+  RequestID string `json:"requestId"`
+  State string `json:"state"`
+ }
+ if err:=c.post(ctx,"/v1/agent/request-invite",map[string]string{
+  "organization":org,"token":token,
+  "publicKey":base64.RawURLEncoding.EncodeToString(s.PublicKey()),
+ },&response);err!=nil||response.RequestID==""||response.State!="PENDING"{return "",ErrDenied}
+ return response.RequestID,nil
+}
