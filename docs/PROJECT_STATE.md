@@ -20,7 +20,7 @@ R2J.6A final GitHub CI `38387888892` SUCCESS: Linux Go/race, PostgreSQL signed s
 - `docs/R2K1_DISCOVERY_READ_GRANTS.md` details security boundaries.
 
 ## Verification
-R2K.1 committed; **new branch CI pending**. Must verify Linux tests/vet/race, serial disposable PostgreSQL pairing/auth/device-grant/TLS acceptance, Windows native DPAPI builds, macOS Keychain builds. This is policy and passive discovery, NOT usable hardware access.
+**R2K.1 implementation CI VERIFIED GREEN:** GitHub Actions run `38389538415` completed SUCCESS for all four jobs: Linux Go/vet/race and DNS-SD parser tests, disposable PostgreSQL signed discovery-only grant/expiry/replay/tenant isolation plus native HTTPS grant/revoke, existing separate-process authenticated TLS crash/recovery acceptance, Windows DPAPI/full packages and macOS Keychain/full packages. This verifies code, not real physical printers, vendor attendance devices or a cross-network staging pilot. A documentation-only update triggers a new CI run.
 
 ## Blockers
 No actual WAN two-network R2J.6B pilot, public deployment, production SSO/abuse protection, signed installer or native background service, secure hardware identity binding, validated active printer discovery, attendance protocols, per-operation grant enforcement, real LAN/device commands or hardware acceptance. Streaming agent presence still explicitly transmits `capabilities=NONE`. It cannot print, read attendance records or proxy arbitrary TCP.
