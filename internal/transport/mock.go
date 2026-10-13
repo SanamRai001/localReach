@@ -113,10 +113,35 @@ func(a Agent)PollOnce(ctx context.Context)(bool,error){
  if status==204{return false,nil}
  if status!=200{return false,fmt.Errorf("claim status %d",status)}
  if cmd.ID==""||cmd.Operation!="mock.ping"{return true,errors.New("unexpected command")}
- if err=a.Journal.Submit(cmd.ID,cmd.Operation);err!=nil{return true,fmt.Errorf("journal refused duplicate or failed write: %w",err)}
+ // An existing edge command is never executed twice. If a previous result
+ // was durably recorded, report that result using the freshly fenced lease.
+ // Any other previous state is quarantined as uncertain, never re-executed.
+ previous,exists:=a.Journal.Get(cmd.ID)
+ if !exists {
+  if err=a.Journal.Submit(cmd.ID,cmd.Operation);err!=nil{return true,fmt.Errorf("edge journal submission: %w",err)}
+ } else if previous.Operation!=cmd.Operation {
+  return true,errors.New("edge command identity mismatch; requires operator reconciliation")
+ }
  status,err=a.request(ctx,"/v1/agent/received",token,map[string]string{"id":cmd.ID,"lease":cmd.Lease},nil)
  if err!=nil{return true,err}
  if status!=204{return true,fmt.Errorf("receive status %d",status)}
+ if exists {
+  if previous.State==journal.Succeeded||previous.State==journal.Failed||previous.State==journal.Indeterminate{
+   terminal:=broker.Indeterminate
+   if previous.State==journal.Succeeded{terminal=broker.Succeeded}
+   if previous.State==journal.Failed{terminal=broker.Failed}
+   status,err=a.request(ctx,"/v1/agent/complete",token,map[string]string{"id":cmd.ID,"lease":cmd.Lease,"state":string(terminal),"result":previous.Result},nil)
+   if err!=nil{return true,err}
+   if status!=204{return true,fmt.Errorf("reconciliation status %d",status)}
+   return true,nil
+  }
+  // QUEUED or EXECUTING existing intent may have unknown effects after failure.
+  // Do not begin or run hardware on a repeated claim.
+  status,err=a.request(ctx,"/v1/agent/complete",token,map[string]string{"id":cmd.ID,"lease":cmd.Lease,"state":"INDETERMINATE","result":"preexisting local intent; manual review required"},nil)
+  if err!=nil{return true,err}
+  if status!=204{return true,fmt.Errorf("uncertain reconciliation status %d",status)}
+  return true,nil
+ }
  if err=a.Journal.Begin(cmd.ID);err!=nil{return true,err}
  if err=a.Journal.Finish(cmd.ID,journal.Succeeded,"pong");err!=nil{return true,err}
  status,err=a.request(ctx,"/v1/agent/complete",token,map[string]string{"id":cmd.ID,"lease":cmd.Lease,"state":"SUCCEEDED","result":"pong"},nil)
