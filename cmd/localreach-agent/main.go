@@ -97,8 +97,8 @@ func run(ctx context.Context,args []string)error{
    return nil
   }
   if *requestID!=""{return errors.New("serve does not accept an enrollment request")}
-  monitor:=agentservice.New(*org,id,remote)
-  monitor.Interval=*interval
+  monitor:=agentservice.NewLive(*org,id,remote)
+  monitor.Retry=*retry
   ctx,cancel:=context.WithCancel(ctx)
   defer cancel()
   done:=make(chan struct{})
