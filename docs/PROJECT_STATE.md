@@ -1,26 +1,30 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, click Connect, and authorize only approved local-device capabilities.
-**Active branch:** `feat/r2f-proof-bound-pairing-handoff`
-**Phase:** R2F approved invitation handoff, internal primitive.
-**Base:** `feat/r2e-admin-pairing-approval` (PR #20); PRs #1–#20 remain stacked and unmerged. No deployment.
+**Goal:** Install once, click Connect, approve scoped LAN-device access.
+**Active branch:** `feat/r2g-pairing-tls-transport`
+**Phase:** R2G TLS pairing handler, replay controls and pairing handoff source correction.
+**Base:** `feat/r2f-proof-bound-pairing-handoff` PR #21; PRs #1–#21 remain open and unmerged. No deployments.
 
-## Verified history
-Prior R1L Go CI tests, vet, race and lab compilation succeeded. R2A two-process loopback HTTPS smoke CI succeeded. Neither verifies internet connectivity, UI pairing nor physical devices.
+## Verified baseline
+R1L Go test/vet/race/build succeeded; R2A localhost separate-process HTTPS mock smoke run 38351933557 succeeded.
 
-## New R2F work
-- `internal/pairing.Manager.InvitationForAgent` makes the invitation obtainable after approval only when a candidate demonstrates possession of its originally submitted Ed25519 private key by signing the random request ID under an independent domain separator.
-- `SignHandoff` client helper for signed proof.
-- The returned invitation remains one-time at the registry enrollment boundary; the agent signs the invitation with the existing identity proof and Redeem consumes it atomically within the in-memory registry.
-- Added tests for unapproved/wrong-key handoff denial, successful approval/enrollment, wrong-key enrollment, replay rejection and expiry.
-- `docs/R2F_PAIRING_HANDOFF.md` specifies security assumptions and remaining work.
+## CI finding
+R2F CI run 38354615681 concluded FAILURE at unit/integration tests. R2F handoff source contained literal `\\n` sequences instead of Go newlines. Corrected in this new branch; R2G CI MUST be checked before reporting a passing result.
 
-## Verification
-GitHub source committed; **R2F CI result not yet confirmed**. No user manual tests requested.
+## Work authored in R2G
+- Fixed handoff method malformed source text.
+- New `internal/pairtransport` test-only TLS HTTP handler for preprovisioned admin Ed25519 signed decisions, nonce replay rejection, one-use agent challenge and invitation handoff, and key-proof enrollment.
+- Bound JSON sizes, disallowed browser origins and plaintext transport.
+- Added tests for signing/tenant isolation, replay, incorrect keys and challenge expiry.
+- `docs/R2G_TLS_PAIRING.md` records intended trust boundary and limitations.
 
-## Security limitations
-The pairing manager is not an authenticated service: its authorization boolean is trusted input, not real user login/role verification. No actual HTTPS invitation transfer, secure OS key vault, durable approval/audit, tenant admin policy, transport binding, rate limits, browser pairing, or capability grants. No public networking, hardware or installer integration. The current setup UI must continue to show NOT_PAIRED until a real authenticated status exists.
+## Remaining gaps
+- HTTP transport does not start a listener; tests use httptest TLS. Pair request creation remains in-process.
+- No production login/SSO or durable admin identity, persisted approvals, secure OS key vault, rate limits, audit, multi-node state, channel-bound sessions, signed installers, device grants or discovery.
+- R2G CI results not yet confirmed; no real pairing UI, WAN/CGNAT verification or hardware use.
+- Earlier static-ID handoff primitive remains unsafe for exposed network use and is not used in new transport.
+- All upstream PRs are stacked; main remains unchanged. Do not merge or deploy without approval.
 
 ## Next
-Verify R2F CI; implement separately authenticated tenant-admin decision grants and a confidential authenticated invitation delivery endpoint with abuse resistance, then durable state and a real agent key store. Keep public listeners and physical commands disabled until security review and integration acceptance.
+Confirm R2G CI green, repair failures if necessary, then implement durable/admin-authenticated pairing and secure local agent key storage before integrating Connect UX. Keep physical capability execution disabled.
