@@ -9,6 +9,7 @@ import (
  "errors"
  "net"
  "sort"
+ "strconv"
  "strings"
  "time"
 )
@@ -94,7 +95,7 @@ func Parse(packet []byte)[]Candidate{
   if err!=nil||port<1||!strings.HasSuffix(target,".local"){continue}
   // Do not return/resolve IP addresses or contact the target host.
   // A SHA-256 of mDNS strings is NOT a cryptographic device identity.
-  hash:=sha256.Sum256([]byte(name+"|"+target+"|"+string(rune(port>>8))+":"+string(rune(port&255))))
+  hash:=sha256.Sum256([]byte(name+"|"+target+"|"+strconv.Itoa(port)))
   finger:=hex.EncodeToString(hash[:])
   result[finger]=Candidate{Name:name,Type:t,Fingerprint:finger,Source:"UNTRUSTED_MDNS",Verified:false}
  }
