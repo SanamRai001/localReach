@@ -16,9 +16,9 @@ import (
  "log"
  "net"
  "net/http"
+ "net/url"
  "os"
  "path/filepath"
- "strings"
  "time"
 
  "github.com/SanamRai001/localReach/internal/broker"
@@ -72,7 +72,7 @@ func runAgent(dir string)error{
  data,err:=os.ReadFile(filepath.Join(dir,"agent.json"));if err!=nil{return err}
  var c config
  if err=json.Unmarshal(data,&c);err!=nil{return err}
- if !strings.HasPrefix(c.URL,"https://127.0.0.1:18787"){return errors.New("lab agent refuses non-loopback target")}
+ target,err:=url.Parse(c.URL);if err!=nil||target.Scheme!="https"||target.Host!="127.0.0.1:18787"||target.Path!=""||target.User!=nil||target.RawQuery!=""||target.Fragment!=""{return errors.New("lab agent refuses non-loopback target")}
  raw,err:=base64.RawURLEncoding.DecodeString(c.Private);if err!=nil{return err}
  if len(raw)!=ed25519.PrivateKeySize{return errors.New("invalid lab private key")}
  roots:=x509.NewCertPool()
