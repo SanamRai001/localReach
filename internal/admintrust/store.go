@@ -13,6 +13,7 @@ import (
  "io"
  "os"
  "sync"
+ "strings"
  "time"
 
  "github.com/SanamRai001/localReach/internal/ownership"
@@ -53,7 +54,7 @@ func digest(e event)string{
  b:=sha256.Sum256(append([]byte(domain),data...))
  return base64.RawURLEncoding.EncodeToString(b[:])
 }
-func validID(s string)bool{return len(s)>0&&len(s)<=128}
+func validID(s string)bool{return len(s)>0&&len(s)<=128&&!strings.ContainsAny(s,"\\x00\\r\\n")}
 func (s *Store)apply(e event)error{
  if !validID(e.Tenant)||!validID(e.KeyID)||e.At<=0{return ErrCorrupt}
  k:=key(e.Tenant,e.KeyID)
