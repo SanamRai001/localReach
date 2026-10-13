@@ -6,6 +6,9 @@ import(
  "context"
  "crypto/tls"
  "encoding/base64"
+ "bufio"
+ "io"
+ "strings"
  "errors"
  "flag"
  "fmt"
@@ -35,9 +38,9 @@ func trustedClient()*http.Client{
  }
 }
 func run(ctx context.Context,args []string)error{
- if len(args)==0{return errors.New("required command: init, enroll or serve")}
+ if len(args)==0{return errors.New("required command: init, request, enroll or serve")}
  command:=args[0]
- if command!="init"&&command!="enroll"&&command!="serve"{return errors.New("unknown command (expected init, enroll or serve)")}
+ if command!="init"&&command!="request"&&command!="enroll"&&command!="serve"{return errors.New("unknown command (expected init, request, enroll or serve)")}
  flags:=flag.NewFlagSet(command,flag.ContinueOnError)
  dir:=flags.String("identity-dir","","identity directory (defaults to user local profile)")
  gateway:=flags.String("gateway","","trusted HTTPS control-plane URL")
@@ -64,12 +67,27 @@ func run(ctx context.Context,args []string)error{
   fmt.Println("Fingerprint:",id.Fingerprint())
   fmt.Println("NOT_PAIRED: an administrator must separately approve enrollment.")
   return nil
- case "enroll","serve":
+ case "request","enroll","serve":
   if *gateway==""||*org==""{return errors.New("organization and trusted HTTPS gateway are required")}
   id,err:=store.Load()
   if err!=nil{return fmt.Errorf("existing native identity required (never regenerated): %w",err)}
   remote,err:=agentremote.New(*gateway,trustedClient())
   if err!=nil{return fmt.Errorf("invalid HTTPS gateway: %w",err)}
+  if command=="request"{
+   if *requestID!=""{return errors.New("request does not accept an approved request ID")}
+   fmt.Fprintln(os.Stderr,"Paste the short-lived administrator invitation token, then press Enter:")
+   input:=bufio.NewReader(io.LimitReader(os.Stdin,256))
+   secret,readErr:=input.ReadString('\n')
+   if readErr!=nil&&readErr!=io.EOF{return errors.New("could not read invitation")}
+   secret=strings.TrimSpace(secret)
+   decoded,decodeErr:=base64.RawURLEncoding.DecodeString(secret)
+   if decodeErr!=nil||len(decoded)!=32{return errors.New("invalid invitation format")}
+   pending,err:=remote.RequestInvitation(ctx,*org,secret,id)
+   if err!=nil{return errors.New("invitation denied or already consumed")}
+   fmt.Println("PENDING_APPROVAL: request",pending)
+   fmt.Println("An authorized administrator must compare the public-key fingerprint and approve separately.")
+   return nil
+  }
   if command=="enroll"{
    if *requestID==""{return errors.New("enroll requires an independently approved -request")}
    agentID,err:=remote.FinishEnrollment(ctx,*org,*requestID,id)
