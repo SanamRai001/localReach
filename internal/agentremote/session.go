@@ -7,7 +7,6 @@ import (
  "encoding/base64"
  "encoding/json"
  "errors"
- "io"
  "net/http"
  "time"
 
@@ -54,7 +53,7 @@ func(c Client)StreamSession(ctx context.Context,org string,s Signer,onHeartbeat 
  if err!=nil{return ErrDenied}
  defer resp.Body.Close()
  if resp.StatusCode!=http.StatusOK||resp.Header.Get("Content-Type")!="application/x-ndjson"{return ErrDenied}
- scanner:=bufio.NewScanner(io.LimitReader(resp.Body,1<<20))
+ scanner:=bufio.NewScanner(resp.Body)
  scanner.Buffer(make([]byte,0,256),2048)
  first:=true
  for scanner.Scan(){
