@@ -19,7 +19,7 @@ R2H.3 latest GitHub Actions run `38360284081` was green: Go test/vet/race and se
 - `docs/R2I1_WINDOWS_DPAPI.md` details Windows user scope, ACL caveats, recovery limitations and next milestones.
 
 ## Verification
-R2I.1 new code committed; **R2I CI results not confirmed** at this state entry. Need green Windows CI as well as Linux Go and PostgreSQL CI before claiming native key persistence validated.
+**R2I.1 verification GREEN**: GitHub Actions run `38363776961` passed all three jobs: Windows DPAPI runtime tests and Windows package tests, standard Go tests/vet/race/two-process TLS mock, and real PostgreSQL transactional pairing/auth tests. This is verification of the storage primitive under hosted Windows runner conditions, not production installation or cross-user credential recovery. A docs-only update triggers a follow-up CI run.
 
 ## Remaining production gaps
 - No installed Windows background agent, actual pairing to the PostgreSQL backend, OS-safe user/key lifecycle or diagnostic UI.
