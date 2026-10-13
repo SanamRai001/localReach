@@ -25,3 +25,5 @@ jobs:
         run: go test -race -count=1 ./...
       - name: Compile lab
         run: go build -o /tmp/localreach-lab ./cmd/localreach-lab
+      - name: Verify separate processes over TLS
+        run: bash scripts/verify-two-process.sh
