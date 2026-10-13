@@ -1,27 +1,20 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Secure one-install access to narrowly approved LAN-device operations.
-**Active branch:** `test/r1l-consolidated-acceptance`
-**Phase:** R1L Go verification automation and acceptance checkpoint.
-**Base:** `feat/r1k2-two-process-harness` (PR #14); PRs #1–#14 remain stacked and unmerged.
+**Goal:** Install once, click Connect, access approved LAN device capabilities.
+**Current branch:** `feat/r2a-one-command-local-lab`
+**Phase:** R2A automated separate-process mock verification, not a customer installer.
+**Base:** `test/r1l-consolidated-acceptance` (PR #15). All previous PRs stacked and open; main still starter README.
 
-## Added in R1L
-- `.github/workflows/go-verify.yml`: on pull requests and selected pushes, run Go package tests, Go vet, race detector and compile the two-process lab using Ubuntu GitHub Actions.
-- Verification jobs provide a durable pass/fail gate; source publication alone does not indicate passing tests.
+## Verified
+GitHub Actions verification runs 38351624562, 38351620338 and 38351586937 concluded SUCCESS on R1L, covering `go test -count=1 ./...`, `go vet ./...`, race tests and lab compilation. These do not prove separate-process delivery.
 
-## Earlier changes
-Architecture/UX spec; mock relay; Ed25519 identity; short-lived signed sessions; TLS test-only gateway; durable broker and edge journals; authenticated outbound mock command polling; replay, recovery and reconciliation logic; exclusive ownership sentinels; loopback gateway/agent two-process lab.
+## This phase
+Added disposable OpenSSL TLS cert + Go build + separate gateway/agent process smoke test script `scripts/verify-two-process.sh`, automatically cleaned up on exit. Added this script to Go verification workflow and `docs/R2A_ONE_COMMAND_LAB.md`.
+The R2A two-process smoke test has **not yet been confirmed passing**.
 
-## Verification status
-**UNKNOWN / NOT VERIFIED:** GitHub Actions execution and test outcomes have not yet been confirmed. A local git network checkout attempt failed because github.com could not be resolved, and the prior phases have not been runtime-tested in this environment. No two-process lab, WAN, real printer, attendance device, or installer usability gate executed.
-
-## Risks / limitations
-- Current lab is loopback only; test-only credentials and in-memory registry.
-- Gateway is not appropriate for public deployment; lacks full admin policy authorization, durable enrollment, bound sessions, rate limits and secure agent key storage.
-- Journal ownership sentinel lacks safe automated stale recovery; append journals lack repair/compaction.
-- Independent signed edge evidence and general safe reconciliation remain incomplete; no physical command allowed.
-- Missing one-click installer/discovery, real WAN/CGNAT verification and device adapters.
+## Security / UX boundaries
+All demo traffic is localhost TLS on fixed 127.0.0.1:18787 with mock.ping only. Not a real internet-connected bridge, one-click consumer installer, device discovery or OS service. In-memory identity and test-key file, single-writer journals, incomplete signed outcome reconciliation, no public-safe admin enrollment/channel binding/limits. Never expose the lab gateway publicly.
 
 ## Next
-Read the actual GitHub Actions result, fix failures before progressing, then run the local two-process lab through a reproducible acceptance gate. Keep all PRs unmerged pending approval and do not expose the gateway.
+Confirm CI smoke result and fix actual failures, then design simplified onboarding and real installer architecture without compromising tenant policy, secure identity, or device safety. Reserve WAN/hardware tests until release gate.
