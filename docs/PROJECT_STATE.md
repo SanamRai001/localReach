@@ -1,31 +1,28 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** One-install, minimal-click, securely scoped connectivity for LAN-only device capabilities.
-**Current branch:** `feat/r1a-command-prototype`
-**Phase:** R1A — local mock lifecycle implementation; R1B secure enrollment and cross-network experiment not started.
-**Baseline:** `docs/foundation-rfc` (documentation PR #1 remains open); `main` contains initial README only.
+**Goal:** One-install, minimal-click, securely scoped access to local device capabilities.
+**Active branch:** `feat/r1b-agent-identity`
+**Baseline:** `feat/r1a-command-prototype`; dependent documentation PR #1 and implementation PR #2 are open. Main has starter README only.
+**Current phase:** R1B identity spike written; not integrated into an internet-facing transport.
 
-## Changes this phase
-- Added Go 1.22 module, loopback-only mock relay and polling agent.
-- Created typed mock.ping command endpoint, simple QUEUED -> DISPATCHED -> SUCCEEDED lifecycle, status query, unauthorized/unsupported/duplicate rejection.
-- Added httptest coverage and PowerShell manual reproduction guide at `docs/R1A_LOCAL_PROTOTYPE.md`.
-- Deliberately limited to loopback. No actual secure remote access, signed installation, device discovery or tenant model.
+## Implemented
+- R0 proposed product vision, UX, architecture, security, research and roadmap.
+- R1A localhost-only Go mock relay/agent, typed mock command, in-memory state, httptest example.
+- R1B `internal/identity`: one-time short-TTL scope-bound invitation, token hashing, Ed25519 proof-of-possession, unique pubkey binding, in-memory revocation, unit test cases for expiry, replay redemption, wrong key, concurrency and defensive copies.
+- R1B threat-boundary notes at `docs/R1B_IDENTITY_SPIKE.md`.
 
 ## Verification
-- GitHub writes verified during creation; tests **not executed in this environment**.
-- User acceptance required: `go test ./...` followed by manual mock round-trip.
-- No network/hardware/UX test completed.
+- GitHub files pushed; test suite **not executed** by GitHub connector and **not reported as passing**.
+- User prefers batching local/manual verification until meaningful integration milestones.
+- No external network proof, production enrollment, installer, discovery, tenant integration, or hardware verification.
 
-## Risks / deviations
-- Shared development bearer token, no identity enrollment, no TLS termination.
-- In-memory queue loses jobs and may strand DISPATCHED items on agent crash.
-- Polling is only a disposable protocol experiment, not RFC transport.
-- Acknowledged device state cannot prove physical printer completion.
-- No production usage of this branch; never expose localhost relay publicly.
+## Risks / blockers
+- R1A remains loopback-only and authenticated by shared development token; **never expose its HTTP listener to the internet**.
+- R1B is an isolated in-memory identity primitive; no admin authorization, persistence, TLS, secure agent key storage, challenge replay tracking, certificate identity binding, or active-session revocation.
+- Agent commands have no durable journal/lease model; crash boundaries unsafe for physical effects.
+- Dependency PRs #1 and #2 are still open; do not merge without approval.
+- Current UI does not exist. One-click UX remains the product target, not proven behavior.
 
-## Next phase
-1. User runs commands in R1A guide and reports actual test output.
-2. Review enrollment identity, tenant authorization and crash-safe command model.
-3. Build R1B on a safe branch: secure outbound connection over TLS, mock cross-network scenario, failure injection.
-4. Preserve one-click setup as release UX target, not an R1A achievement.
+## Next implementation slice
+R1C: independently authenticated TLS outbound transport with persisted transactional enrollment and strict session binding; preserve mock-only capability and bounded queues. Add security and recovery tests before any public bind or real hardware. Reserve longer manual verification for a cohesive end-to-end test gate. Maintain `docs/PROJECT_STATE.md` only as the phase record.
