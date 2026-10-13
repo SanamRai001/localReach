@@ -49,12 +49,12 @@ func testDB(t *testing.T)*sql.DB{
  db.SetMaxOpenConns(8)
  ctx,cancel:=context.WithTimeout(context.Background(),15*time.Second)
  defer cancel()
- for _,name:=range []string{"060_pairing_postgres.sql","061_admin_sessions_postgres.sql","062_agent_resume.sql","063_pairing_invitations.sql","064_shared_admission.sql"}{
+ for _,name:=range []string{"060_pairing_postgres.sql","061_admin_sessions_postgres.sql","062_agent_resume.sql","063_pairing_invitations.sql","064_shared_admission.sql","065_agent_connections.sql"}{
   content,err:=os.ReadFile(filepath.Join("..","..","migrations",name))
   if err!=nil{t.Fatal(err)}
   if _,err=db.ExecContext(ctx,string(content));err!=nil{t.Fatal(err)}
  }
- if _,err=db.ExecContext(ctx,`TRUNCATE lr_admission_windows,lr_pairing_invitation_audit,lr_pairing_invitations,lr_agent_identity_audit,lr_agent_resume_challenges,
+ if _,err=db.ExecContext(ctx,`TRUNCATE lr_agent_connection_audit,lr_agent_connections,lr_admission_windows,lr_pairing_invitation_audit,lr_pairing_invitations,lr_agent_identity_audit,lr_agent_resume_challenges,
  lr_admin_login_audit,lr_admin_sessions,lr_admin_login_challenges,
  lr_pairing_audit,lr_agents,lr_pairing_challenges,lr_decision_nonces,
  lr_pairings,lr_admin_keys,lr_sites,lr_organizations CASCADE`);err!=nil{t.Fatal(err)}

@@ -47,7 +47,7 @@ func run(ctx context.Context,args []string)error{
  org:=flags.String("organization","","organization ID")
  requestID:=flags.String("request","","administrator-approved pairing request ID")
  webDir:=flags.String("web","web/setup","static setup assets (repo-relative)")
- interval:=flags.Duration("interval",60*time.Second,"verification interval (minimum 10s)")
+ retry:=flags.Duration("retry",2*time.Second,"minimum reconnect delay (bounded exponential backoff)")
  if err:=flags.Parse(args[1:]);err!=nil{return err}
  if flags.NArg()!=0{return errors.New("unexpected positional argument")}
  directory:=*dir
@@ -97,8 +97,8 @@ func run(ctx context.Context,args []string)error{
    return nil
   }
   if *requestID!=""{return errors.New("serve does not accept an enrollment request")}
-  monitor:=agentservice.New(*org,id,remote)
-  monitor.Interval=*interval
+  monitor:=agentservice.NewLive(*org,id,remote)
+  monitor.Retry=*retry
   ctx,cancel:=context.WithCancel(ctx)
   defer cancel()
   done:=make(chan struct{})

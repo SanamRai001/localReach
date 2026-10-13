@@ -67,7 +67,7 @@ func serveConfigured(ctx context.Context,certFile,keyFile,dsn string,allowLocalT
   Certificates:[]tls.Certificate{pair},
   MinVersion:minimumTLS,
  })
- handler:=pairapi.Handler{Auth:pgauth.New(db),Pairing:pgpairing.New(db),
+ handler:=pairapi.Handler{Auth:pgauth.New(db),Pairing:pgpairing.New(db),Sessions:pgpairing.New(db),
   Guard:pairapi.NewGuard(nil),Admission:pairapi.NewSQLAdmission(db)}
  var routed http.Handler=handler
  if stage!=nil{routed=stage.Wrap(handler)}

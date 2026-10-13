@@ -60,7 +60,9 @@ async function readLocalStatus(expectedRevision){
      (s.verification!==undefined&&
       !["NOT_CHECKED","VERIFIED_RECENTLY","FAILED","STALE","STOPPED"].includes(s.verification)))throw Error("unrecognized status");
   if(expectedRevision!==revision||index!==1)return;
-  if(s.verification==="VERIFIED_RECENTLY"&&s.pairing==="PAIRED"){
+  if(s.verification==="VERIFIED_RECENTLY"&&s.pairing==="PAIRED"&&s.connection==="ONLINE"){
+   value.textContent="Authenticated cloud connection: ONLINE. Heartbeats are being received. No devices are authorized or discovered.";
+  }else if(s.verification==="VERIFIED_RECENTLY"&&s.pairing==="PAIRED"){
    value.textContent="Identity verified recently against the control plane. Cloud command session: OFFLINE. No devices are authorized or discovered.";
   }else if(s.verification==="FAILED"||s.verification==="STALE"){
    value.textContent="Identity is NOT currently verified ("+s.verification+"). Check the connection and administrator approval. No devices are available.";
