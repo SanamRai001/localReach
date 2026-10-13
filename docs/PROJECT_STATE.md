@@ -1,32 +1,29 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Simple outbound-only setup for narrowly authorized LAN devices, without device-side router changes.
-**Branch:** `feat/r2j4b-restricted-staging-gateway`
-**Phase:** R2J.4B — explicit operator-controlled source-allowlisted HTTPS staging ingress.
-**Base:** `feat/r2j4-admin-approval-distributed-admission` (PR #32). PRs #1–#32 remain open and stacked, no main merge/deploy.
+**Product:** LocalReach — easy, outbound-only, tightly authorized LAN device access without device-side router configuration.
+**Branch:** `feat/r2j5-authenticated-outbound-session`
+**Phase:** R2J.5 — signed agent long-lived outbound HTTPS presence, heartbeat and revocation.
+**Base:** `feat/r2j4b-restricted-staging-gateway` (PR #33). All preceding PRs are open and stacked. No merge or deployment.
 
-## Verified foundation
+## Verified baseline
+R2J.4B final CI run `38380986752` succeeded across Linux Go/vet/race and local HTTPS, PostgreSQL tests, Windows native DPAPI and macOS native Keychain, including the restricted staging allowlist/TLS checks. No actual remote-Wi-Fi pilot or public deployment.
 
-R2J.4A final CI run `38379094549` succeeded in all four Linux unit/vet/race/mock TLS, PostgreSQL authorization/shared admission, Windows DPAPI, and macOS Keychain jobs. The operator native administrator key remains separate, with invitation issuance, fingerprint review, independently signed approval and PostgreSQL-backed per-route admission.
-
-## R2J.4B implemented
-
-- `internal/staginggate`: an explicitly enabled direct-TLS ingress guard for a **restricted cross-network staging pilot**, accepting only configured IP listener/DNS name and narrow source CIDRs (max 16, IPv4 /24 or narrower, IPv6 /64 or narrower).
-- Rejects blocked direct peers at the socket accept stage before TLS handshake, and again per HTTP request; ignores untrusted `X-Forwarded-For`.
-- Validates leaf certificate SAN, valid date and server-auth purpose against DNS identity before binding, and enforces TLS 1.3 minimum, exact SNI/Host and max 16 concurrent application requests.
-- `cmd/localreach-control` defaults to localhost, but can accept `-enable-restricted-staging` with explicit staging listener, hostname and CIDRs. It rejects missing/unsafe input and rejects the disposable plaintext PostgreSQL option in staging mode. TLS and PostgreSQL verification remain required.
-- Tests cover unsafe ranges/config, spoofing, TLS/SNI/Host, certificate mismatch/expiry, concurrency exhaustion and allowed socket peers, plus CLI fail-closed stage flags.
-- `docs/R2J4B_RESTRICTED_STAGING.md` documents operator prerequisites, warnings, test plan and why network availability does not mean a cloud command session.
+## This branch
+- Migration `065_agent_connections.sql`: one active per-org/per-agent random session ID and 15s lease, heartbeat freshness, and scoped OPEN/CLOSE audit.
+- `pgpairing.OpenConnection`, `RenewConnection`, `CloseConnection`, `ConnectionOnline`: transactional lease ownership, expiry and reclaims. Renewal checks agent revocation, pairing and organization status before every live heartbeat. No device permissions or commands.
+- `pairapi.POST /v1/agent/session`: a fresh, one-use signed Ed25519 resume proof **on the same TLS request** opens a long-lived NDJSON stream of `connected`, `heartbeat`, `closed` frames; each has `capabilities=NONE`. Existing native-origin, JSON limits and PostgreSQL admission apply.
+- `agentremote.Client.StreamSession`: existing OS-protected signing key and authenticated HTTPS only. Strict stream-frame validation, no redirect, bounded frames, 12s stall watchdog, on-disconnect offline callback.
+- `agentservice.LiveMonitor`: ONLINE derives only from a fresh authenticated frame on a live stream, OFFLINE on stream loss/staleness; bounded reconnect/backoff and cancellation.
+- Native `localreach-agent serve` runs the stream monitor; the read-only loopback status/UI distinguishes genuine ONLINE session from identity-only verification and always reports no discovered/authorized devices.
+- Real PostgreSQL tests cover single-owner lease, another database connection, expiry/reclaim, incorrect session ID, revocation, and a live TLS stream closing after administrator revocation. Local monitor tests cover genuine frame presence, stale/failed state and shutdown.
+- `docs/R2J5_OUTBOUND_SESSIONS.md` documents protocol, timing, operator constraints and readiness blockers.
 
 ## Verification
+R2J.5 code authored. **Final branch CI not yet confirmed.** Must check Linux Go/vet/race, real PostgreSQL stream/lease tests, Windows native DPAPI and full packages, macOS native Keychain/full packages before treating the phase as verified.
 
-**R2J.4B IMPLEMENTATION CI VERIFIED GREEN:** GitHub Actions run `38380788295` concluded SUCCESS across all four jobs: Linux Go/vet/race/TLS smoke and staging guard tests, real PostgreSQL pairing/admission integration, Windows DPAPI/full packages, and macOS Keychain/full packages. Restricted TLS CIDR/certificate/SNI/Host/concurrency negative tests passed. This verifies code and automated test behavior, NOT actual DNS, remote Wi-Fi reachability, authorized cloud deployment or WAN staging acceptance. A subsequent documentation-only update triggers a fresh CI run.
-
-## Explicit limitations
-
-Source-allowlisted staging is **not** a publicly hardened Internet production deployment. DNS, TLS certificate installation, static ingress peer IP, firewall, host lifecycle, secure environment secrets, SSO/provisioning, monitoring, IP/certificate rotation, retention, rollback and real WAN pilot remain operator tasks. No persistent cloud session or truthful ONLINE signal, signed end-user installers, capability grants, discovery or printer/attendance actions. Identity verification remains `connection=OFFLINE`, `capabilities=NONE`.
+## Important limits
+This is a **read-only persistent presence session**. No printer/attendance device commands, generic reverse proxy, TCP forwarding, terminal, LAN discovery or device capability grants are available. No production public gateway or actual WAN pilot was executed. The restricted staging listener still requires operator-controlled DNS/TLS/source-IP firewall and only supports a tiny maximum of 16 concurrent routed requests. Crash cleanup waits for the 15s lease timeout; status is not security authorization. Signed installers, true user SSO, revocation fanout, multi-region streaming scale, production abuse protection and hardware acceptance remain unfinished.
 
 ## Next
-
-CI and security findings first. Then R2J.4C real authorized two-network acceptance, R2J.5 authenticated outbound long-lived session and revocation, and R2K narrow separately authorized device capabilities. No merges or public deployments unless explicitly approved.
+CI first. Then R2J.6 real approved cross-network acceptance, R2K explicit capability grants and read-only discovery. Main merge and deployment require explicit approval.
