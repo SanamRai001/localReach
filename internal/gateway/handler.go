@@ -34,7 +34,7 @@ func decode(w http.ResponseWriter,r *http.Request,to any)bool{
  dec.DisallowUnknownFields()
  if err:=dec.Decode(to);err!=nil{http.Error(w,"invalid request",400);return false}
  var extra any
- if err:=dec.Decode(&extra);err==nil{http.Error(w,"trailing data",400);return false}
+ if err:=dec.Decode(&extra);err!=io.EOF{http.Error(w,"trailing or malformed data",400);return false}
  return true
 }
 func jsonReply(w http.ResponseWriter,status int,value any){
