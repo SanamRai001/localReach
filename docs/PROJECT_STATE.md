@@ -1,25 +1,19 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, click Connect and authorize scoped LAN-only device capabilities.
-**Active branch:** `feat/r2d-loopback-setup-service`
-**Phase:** R2D local setup page and read-only status served from the same trusted loopback origin.
-**Base:** `feat/r2c-local-status-pairing-gate` (PR #18); stacked PRs #1–#18 remain open. No merge/deploy.
+**Goal:** Install once, securely connect approved LAN device capabilities.
+**Active branch:** `feat/r2e-admin-pairing-approval`
+**Phase:** R2E tenant-scoped pairing approval policy primitive (not end-to-end pairing).
+**Base:** `feat/r2d-loopback-setup-service` PR #19; upstream PRs #1–#18 open. No merge/deploy.
 
-## Prior confirmed verification
-Go CI test/vet/race/build passed in R1L; loopback separate-process HTTPS mock acceptance passed in R2A. No actual internet network or device verification.
+## Implemented
+R0–R2D architecture and UX docs, identity and signed sessions, mock HTTPS command transport, crash-aware journals, reconnection, loopback status and setup UI. R2E adds `internal/pairing` with pending/rejected/approved/expired/enrolled state checks, tenant-scoped independently authorized admin decisions, one-time invitation issuance only after approval, and tests for denied unauthorized/cross-tenant and expired approvals.
 
-## R2D changes
-- `internal/localsetup` serves exact static setup assets and existing `/v1/local/status` handler from `127.0.0.1:18788`.
-- Strict Host, loopback peer, optional Origin, read-only method and asset path checks; CSP and other conservative response headers.
-- `cmd/localreach-setup` standalone preview entrypoint, started by `go run ./cmd/localreach-setup`.
-- Added tests for invalid host, nonloopback peer, origin, mutation and static allowlist, plus `docs/R2D_LOCAL_SETUP.md`.
+## Verified baseline
+Prior CI Go tests/vet/race/build passed and two-process mock loopback HTTPS test passed. R2E CI not confirmed; new Go tests not run here.
 
-## Verification
-R2D implementation committed, new CI not confirmed yet. No local process was started, nor real UI browser or OS service tested during authoring.
-
-## Security / functionality limitations
-This is a read-only local preview service, not an installed agent or actual connection. Default status remains NOT_PAIRED/OFFLINE. No authorization-backed pairing, native secure key store, user grants, signed installer, device discovery, physical adapters, WAN listener or CGNAT verification. Same-origin status doesn't authenticate malicious local software. Keep real devices and public exposure disabled.
+## Blocking limitations
+R2E is **not usable pairing**: identity token is hidden and no secure agent delivery exists; no authenticated admin HTTP route, persistent approvals, safe OS key storage or independent signed agent consent. No capabilities granted. Local setup UI remains NOT_PAIRED/OFFLINE. Browser status is not linked to a real installed agent. No public-safe WAN service, hardware, signed installer or discovery. In-memory pairing and identity stores restart empty.
 
 ## Next
-Confirm current PR CI, then implement admin-approved pairing as a separate transactional security boundary. Only after that: first real installer/agent status, explicit capability grants and supported discovery. Preserve PR stack without unauthorized merges.
+Verify R2E CI; design a durable tenant-admin identity/authorization interface and secure one-time invitation transfer, with independently approved capabilities. Do not expose pairing endpoints publicly or use hardware until end-to-end security gates pass.
