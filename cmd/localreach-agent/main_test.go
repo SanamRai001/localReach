@@ -18,6 +18,8 @@ func TestCommandsRequireExplicitParametersAndDoNotGenerateKeys(t *testing.T){
   {},
   {"bad-command"},
   {"serve"},
+  {"request"},
+  {"request","-organization","org","-gateway","https://example.com","-identity-dir",dir},
   {"enroll"},
   {"init","-gateway","https://example.com","-identity-dir",dir},
   {"init","-request","abc","-identity-dir",dir},
