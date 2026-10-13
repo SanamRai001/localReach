@@ -55,12 +55,17 @@ async function readLocalStatus(expectedRevision){
   if(!response.ok)throw Error("status unavailable");
   const s=await response.json();
   if(!["RUNNING","STOPPED"].includes(s.agent)||
-     !["NOT_PAIRED","PENDING_APPROVAL","PAIRED","REVOKED","EXPIRED"].includes(s.pairing)||
-     !["ONLINE","OFFLINE"].includes(s.connection))throw Error("unrecognized status");
+     !["NOT_PAIRED","PENDING_APPROVAL","PAIRED","REVOKED","EXPIRED","UNVERIFIED"].includes(s.pairing)||
+     !["ONLINE","OFFLINE"].includes(s.connection)||
+     (s.verification!==undefined&&
+      !["NOT_CHECKED","VERIFIED_RECENTLY","FAILED","STALE","STOPPED"].includes(s.verification)))throw Error("unrecognized status");
   if(expectedRevision!==revision||index!==1)return;
-  value.textContent="Agent: "+s.agent+" · Pairing: "+s.pairing+" · Cloud: "+s.connection+".";
-  if(s.pairing!=="PAIRED"||s.connection!=="ONLINE"){
-   value.textContent+=" Pairing or verified cloud connectivity is not complete.";
+  if(s.verification==="VERIFIED_RECENTLY"&&s.pairing==="PAIRED"){
+   value.textContent="Identity verified recently against the control plane. Cloud command session: OFFLINE. No devices are authorized or discovered.";
+  }else if(s.verification==="FAILED"||s.verification==="STALE"){
+   value.textContent="Identity is NOT currently verified ("+s.verification+"). Check the connection and administrator approval. No devices are available.";
+  }else{
+   value.textContent="Agent: "+s.agent+" · Pairing: "+s.pairing+" · Connection: "+s.connection+". No devices are authorized.";
   }
  }catch(_){
   if(expectedRevision===revision&&index===1)

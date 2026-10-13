@@ -1,28 +1,27 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Install once, connect over outbound TLS and authorize narrowly scoped local devices without router changes.
-**Current branch:** `feat/r2j1-https-pairing-control-plane`
-**Phase:** R2J.1 HTTPS-native pairing transport and truthful local setup preview.
-**Base:** `feat/r2i3-agent-identity-binding` (PR #28). All prior PRs remain open and stacked. No main merge/deploy.
+**Goal:** Install once, approve securely and access only explicitly authorized LAN-only device capabilities.
+**Current branch:** `feat/r2j2-local-agent-verification`
+**Phase:** R2J.2 — manually runnable native agent, live HTTPS identity proof and read-only local status.
+**Base:** `feat/r2j1-https-pairing-control-plane` (PR #29). Prior PRs #1–#29 remain open and stacked; main unchanged. Nothing deployed.
 
 ## Verified baseline
-R2I.3 latest CI `38367445700` SUCCESS: PostgreSQL pairing, native signer lifecycle and recovery, Windows DPAPI, Linux Go/vet/race/mocked TLS, macOS Keychain CGo and fallback. No real native installed agent or public WAN testing.
+R2J.1 latest CI run `38369735674` SUCCESS across Linux Go unit/vet/race and mock TLS two-process smoke, real PostgreSQL pairing/TLS tests, Windows native DPAPI/full packages and macOS Keychain/full packages/fallback. No actual installed service or publicly deployed cloud control plane.
 
-## Authored R2J.1
-- `internal/pairapi.Handler`: isolated HTTPS-only JSON API, no public listener. Native administrator proposal/approval/revocation requires short-lived scoped `pgauth` OWNER/ADMIN bearer; signed decisions must match the actor and are transactionally validated by PostgreSQL. Enrollment and resume require fresh, bounded one-use Ed25519 proofs; identity verification does not grant device access.
-- `internal/agentremote.Client`: native signer uses caller-authenticated HTTPS only, disallows redirects and insecure/credential-bearing URL forms. No database credentials in agent, no arbitrary signing endpoint in browser.
-- New test-backed controlled TLS flow exercises authenticated administrator key-login, protected proposal, signed approval, agent enrollment, restart proof with fresh backend, and revocation denial. No public or Internet-facing process.
-- `web/setup/setup.js`: removes fake `Your computer is connected` state, labels previews consistently and prevents stale asynchronous status responses from modifying the wrong screen.
-- PostgreSQL CI includes `internal/pairapi`; native client has redirect/plaintext denial tests.
-- `docs/R2J1_HTTPS_PAIRING.md` details protocol, test acceptance and safety gaps.
+## New R2J.2 code
+- `cmd/localreach-agent` adds manual native `init`, `enroll` and `serve` commands. `init` explicitly creates an OS-protected user-scoped Ed25519 identity and prints only public information. `enroll` requires a separately admin-approved request and a trusted HTTPS control-plane URL. `serve` loads an existing identity only, performs outbound identity verification, and runs the read-only localhost setup page. No plaintext keys, database credentials or device permissions.
+- `internal/agentservice.Monitor` verifies identity immediately and periodically against `agentremote.Client.VerifyIdentity`, with a max 90-second recent-proof window. It reports PAIRED only when recently server verified; failure or expiry becomes UNVERIFIED. Cloud connection stays OFFLINE and devices NOT_DISCOVERED because a proof is not an online session.
+- `internal/localstatus.Snapshot` adds explicit verification freshness and lastVerifiedAt UTC fields; no mutation endpoints. `localsetup.ServeContext` supports cancelable loopback-only HTTP, strict Host, peer address, and Origin guards.
+- `web/setup/setup.js` displays identity proof accurately and never suggests device connectivity/permissions from a status GET.
+- Added monitor/local handler tests, CLI fail-closed command tests and cross-platform native diagnostic binary compilation. `docs/R2J2_LOCAL_AGENT.md` provides explicit user instructions and limits.
 
 ## Verification
-**R2J.1 CI verified green**: GitHub Actions run `38369546185` concluded SUCCESS for all four jobs: Linux Go unit/vet/race plus separate-process HTTPS smoke, disposable PostgreSQL admin/auth/HTTPS-native pairing integration, Windows DPAPI/full packages, and macOS native Keychain/full packages/disabled-CGo. An earlier run failed from handler method-check ordering (GET returned 503 instead of 405), corrected in commit `daf4aa0647adf0774cf235b01b1179ef1a98d278`. A subsequent documentation-only commit triggers its own CI verification.
+**R2J.2 implementation CI VERIFIED GREEN**: GitHub Actions run `38374087799` concluded SUCCESS for Linux Go unit/vet/race, native diagnostic agent build, local two-process TLS smoke, disposable PostgreSQL pairing integration, Windows DPAPI/native agent/full package build, and macOS Keychain/native agent/full package build. This validates code and local mocks, not installation on a customer device, production gateway or a live WAN relay. A subsequent documentation-only update triggers another CI run.
 
-## Not production ready
-No public HTTPS pairing listener, real administrator login/SSO and user consent UI, production rate limiting and trust-onboarding, signed installer, OS service, actual WAN/CGNAT relay, live agent online status, optional Keychain/Secret Service live acceptance, explicit device capabilities, printer or attendance driver, public deployment or hardware testing.
-Even successful signed identity verification returns `OFFLINE` and `NONE` capabilities. Local preview remains status-only; it never performs real pairing. All PRs remain unmerged pending explicit approval.
+## Remaining production blockers
+No signed installer/autostart service, actual deployed authenticated TLS control-plane, administrator consent and invitation UI, multi-tenant abuse rate limits, persistent authorized cloud command session, WAN/CGNAT acceptance, device grants/discovery/printer or attendance drivers, production OS service accounts, native vault live acceptance and recovery/rotation UI. An ephemeral successful identity proof is NOT an online cloud relay session.
+The native diagnostic agent is manually runnable from the repo and fails closed when the key vault is unavailable; no production packaging or device command permissions exist.
 
 ## Next
-R2J.2 secure installed agent and operator-managed pairing API with authenticated invite intake, production rate limiting, revocation fanout and real local status. Then R2K explicit capability grants, device discovery and hardware acceptance.
+Verify R2J.2 CI and resolve code/OS failures. Then R2J.3 hardened operator-hosted pairing service and trusted invitation/user UX, followed by R2K scoped device discovery and capability grants. Do not merge/deploy without explicit approval.
