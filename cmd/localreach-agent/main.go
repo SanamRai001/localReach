@@ -47,7 +47,7 @@ func run(ctx context.Context,args []string)error{
  org:=flags.String("organization","","organization ID")
  requestID:=flags.String("request","","administrator-approved pairing request ID")
  webDir:=flags.String("web","web/setup","static setup assets (repo-relative)")
- interval:=flags.Duration("interval",60*time.Second,"verification interval (minimum 10s)")
+ retry:=flags.Duration("retry",2*time.Second,"minimum reconnect delay (bounded exponential backoff)")
  if err:=flags.Parse(args[1:]);err!=nil{return err}
  if flags.NArg()!=0{return errors.New("unexpected positional argument")}
  directory:=*dir
