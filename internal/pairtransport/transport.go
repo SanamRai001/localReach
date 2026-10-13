@@ -14,6 +14,7 @@ import (
  "sync"
  "time"
 
+ "github.com/SanamRai001/localReach/internal/admintrust"
  "github.com/SanamRai001/localReach/internal/identity"
  "github.com/SanamRai001/localReach/internal/pairing"
 )
@@ -24,10 +25,13 @@ type Decision struct {
  Tenant string `json:"tenant"`
  Approve bool `json:"approve"`
  Nonce string `json:"nonce"`
+ KeyID string `json:"keyId,omitempty"`
+ IssuedAt int64 `json:"issuedAt,omitempty"`
+ ExpiresAt int64 `json:"expiresAt,omitempty"`
 }
 func field(s string)string{return strconv.Itoa(len(s))+":"+s}
 func decisionMessage(d Decision)[]byte{
- return []byte(decisionDomain+field(d.ID)+field(d.Tenant)+strconv.FormatBool(d.Approve)+field(d.Nonce))
+ return []byte(decisionDomain+field(d.ID)+field(d.Tenant)+strconv.FormatBool(d.Approve)+field(d.Nonce)+field(d.KeyID)+strconv.FormatInt(d.IssuedAt,10)+":"+strconv.FormatInt(d.ExpiresAt,10))
 }
 func SignDecision(private ed25519.PrivateKey,d Decision)[]byte{
  return ed25519.Sign(private,decisionMessage(d))
@@ -35,17 +39,26 @@ func SignDecision(private ed25519.PrivateKey,d Decision)[]byte{
 type challenge struct{ id string; expires time.Time }
 type Handler struct{
  Manager *pairing.Manager
- Admins map[string]ed25519.PublicKey // tenant -> trusted admin key
+ Admins map[string]ed25519.PublicKey // legacy prototype: tenant -> trusted admin key
+ Trust *admintrust.Store
  mu sync.Mutex
  challenges map[string]challenge
  decisions map[string]bool
  now func()time.Time
 }
 func New(manager *pairing.Manager,admins map[string]ed25519.PublicKey,now func()time.Time)http.Handler{
+ return newHandler(manager,admins,nil,now)
+}
+// NewWithTrust uses persisted, revocable tenant-scoped administrator keys.
+// Provisioning remains a trusted operator-only action, not an HTTP route.
+func NewWithTrust(manager *pairing.Manager,store *admintrust.Store,now func()time.Time)http.Handler{
+ return newHandler(manager,nil,store,now)
+}
+func newHandler(manager *pairing.Manager,admins map[string]ed25519.PublicKey,store *admintrust.Store,now func()time.Time)http.Handler{
  if now==nil{now=time.Now}
  keys:=map[string]ed25519.PublicKey{}
  for k,v:=range admins{keys[k]=append(ed25519.PublicKey(nil),v...)}
- h:=&Handler{Manager:manager,Admins:keys,now:now,challenges:map[string]challenge{},decisions:map[string]bool{}}
+ h:=&Handler{Manager:manager,Admins:keys,Trust:store,now:now,challenges:map[string]challenge{},decisions:map[string]bool{}}
  mux:=http.NewServeMux()
  mux.HandleFunc("/v1/pair/admin/decide",h.decide)
  mux.HandleFunc("/v1/pair/agent/challenge",h.challenge)
@@ -92,15 +105,22 @@ func(h *Handler)decide(w http.ResponseWriter,r *http.Request){
  }
  if !parse(w,r,&request){return}
  d:=request.Decision
- pub,ok:=h.Admins[d.Tenant]
  signature,e:=base64.RawURLEncoding.DecodeString(request.Signature)
- if !ok||len(pub)!=ed25519.PublicKeySize||e!=nil||len(signature)!=ed25519.SignatureSize||!validNonce(d.Nonce)||len(d.ID)>128||d.ID==""||!ed25519.Verify(pub,decisionMessage(d),signature){denied(w);return}
- // A verified nonce is single-use. State is intentionally bounded and fails
- // closed at capacity; production needs persisted transactional replay records.
- h.mu.Lock()
- if len(h.decisions)>=4096||h.decisions[d.Tenant+":"+d.Nonce]{h.mu.Unlock();denied(w);return}
- h.decisions[d.Tenant+":"+d.Nonce]=true
- h.mu.Unlock()
+ if e!=nil||len(signature)!=ed25519.SignatureSize||!validNonce(d.Nonce)||len(d.ID)>128||d.ID==""{denied(w);return}
+ if h.Trust!=nil{
+  // Freshness is signed; prevent indefinitely valid offline approvals.
+  now:=h.now().Unix()
+  if d.KeyID==""||d.IssuedAt>now+30||d.IssuedAt<now-120||d.ExpiresAt<=now||d.ExpiresAt>d.IssuedAt+120{denied(w);return}
+  if err:=h.Trust.VerifyAndConsume(d.Tenant,d.KeyID,d.Nonce,decisionMessage(d),signature);err!=nil{denied(w);return}
+ }else{
+  // Legacy in-memory test configuration. Never deploy or expose publicly.
+  pub,ok:=h.Admins[d.Tenant]
+  if !ok||len(pub)!=ed25519.PublicKeySize||!ed25519.Verify(pub,decisionMessage(d),signature){denied(w);return}
+  h.mu.Lock()
+  if len(h.decisions)>=4096||h.decisions[d.Tenant+":"+d.Nonce]{h.mu.Unlock();denied(w);return}
+  h.decisions[d.Tenant+":"+d.Nonce]=true
+  h.mu.Unlock()
+ }
  req,e:=h.Manager.Decide(d.ID,d.Tenant,true,d.Approve)
  if e!=nil{denied(w);return}
  answer(w,map[string]string{"state":string(req.State)})
