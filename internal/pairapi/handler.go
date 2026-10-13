@@ -30,6 +30,7 @@ type Pairing interface{
  VerifyResume(context.Context,string,string,string,[]byte)error
  IssueInvitation(context.Context,string,string,string)(pgpairing.Invitation,error)
  RedeemInvitation(context.Context,string,string,ed25519.PublicKey)(pgpairing.Record,error)
+ ReviewRequest(context.Context,string,string)(pgpairing.Review,error)
 }
 type Handler struct{Auth Auth;Pairing Pairing;Guard *Guard}
 type proposal struct {
@@ -52,6 +53,10 @@ type invitationRequest struct{
  Site string `json:"site"`
  Token string `json:"token"`
  PublicKey string `json:"publicKey"`
+}
+type reviewRequest struct{
+ Organization string `json:"organization"`
+ RequestID string `json:"requestId"`
 }
 type loginRequest struct{
  Organization string `json:"organization"`
@@ -120,6 +125,7 @@ func(h Handler)ServeHTTP(w http.ResponseWriter,r *http.Request){
  case "/v1/control/login-challenge":h.loginChallenge(w,r)
  case "/v1/control/login":h.login(w,r)
  case "/v1/control/invite":h.invite(w,r)
+ case "/v1/control/review":h.review(w,r)
  case "/v1/agent/request-invite":h.redeemInvite(w,r)
  case "/v1/control/propose": h.propose(w,r)
  case "/v1/control/decide":h.decide(w,r)
@@ -249,4 +255,17 @@ func(h Handler)redeemInvite(w http.ResponseWriter,r *http.Request){
  record,err:=h.Pairing.RedeemInvitation(r.Context(),p.Organization,p.Token,ed25519.PublicKey(public))
  if err!=nil{denied(w);return}
  respond(w,map[string]string{"requestId":record.RequestID,"state":record.State})
+}
+
+func(h Handler)review(w http.ResponseWriter,r *http.Request){
+ var p reviewRequest
+ if !decode(w,r,&p){return}
+ if _,ok:=h.admin(w,r,p.Organization);!ok{return}
+ value,err:=h.Pairing.ReviewRequest(r.Context(),p.Organization,p.RequestID)
+ if err!=nil{denied(w);return}
+ respond(w,map[string]any{
+  "requestId":value.RequestID,"site":value.Site,
+  "state":value.State,"fingerprint":value.Fingerprint,
+  "expiresAt":value.ExpiresAt.UTC().Format(time.RFC3339),
+ })
 }
