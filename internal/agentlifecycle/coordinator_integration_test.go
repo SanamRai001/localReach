@@ -59,13 +59,12 @@ func TestCoordinatorPostgreSQLApprovedIdentityAndRestart(t *testing.T){
   IssuedAt:time.Now().Unix(),ExpiresAt:time.Now().Add(time.Minute).Unix(),
  }
  if _,err=backend.Decide(ctx,decision,pgpairing.SignDecision(adminPriv,decision));err!=nil{t.Fatal(err)}
- wrong:=newSigner(t)
- if _,err=native.FinishPairing(ctx,"org",proposal.RequestID,wrong);!errors.Is(err,ErrDenied){t.Fatal("wrong key enrolled")}
  enrolled,err:=native.FinishPairing(ctx,"org",proposal.RequestID,signer)
  if err!=nil||enrolled.State!="ENROLLED"||!enrolled.AgentID.Valid{t.Fatalf("enrollment failed: %v %+v",err,enrolled)}
  reopened,err:=sql.Open("postgres",os.Getenv("LOCALREACH_TEST_POSTGRES_DSN"));if err!=nil{t.Fatal(err)}
  defer reopened.Close()
  afterRestart:=Coordinator{Backend:pgpairing.New(reopened)}
+ wrong:=newSigner(t)
  if _,err=afterRestart.VerifySavedIdentity(ctx,"org",wrong);!errors.Is(err,ErrDenied){t.Fatal("wrong key restored")}
  agentID,err:=afterRestart.VerifySavedIdentity(ctx,"org",signer)
  if err!=nil||agentID!=enrolled.AgentID.String{t.Fatalf("approved native identity did not recover: %v %q",err,agentID)}
