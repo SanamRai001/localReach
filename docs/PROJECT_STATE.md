@@ -1,29 +1,26 @@
 # Project state
 
 **Date:** 2026-10-13
-**Product:** LocalReach — easy, outbound-only, tightly authorized LAN device access without device-side router configuration.
-**Branch:** `feat/r2j5-authenticated-outbound-session`
-**Phase:** R2J.5 — signed agent long-lived outbound HTTPS presence, heartbeat and revocation.
-**Base:** `feat/r2j4b-restricted-staging-gateway` (PR #33). All preceding PRs are open and stacked. No merge or deployment.
+**Product:** LocalReach — outbound-only narrowly authorized LAN device access, designed to avoid agent-side router changes.
+**Branch:** `test/r2j6-separate-process-tls-acceptance`
+**Phase:** R2J.6A — separate OS process control-plane TLS endurance, crash and recovery acceptance.
+**Base:** `feat/r2j5-authenticated-outbound-session` (PR #34). All earlier PRs #1–#34 remain open and stacked. No merge/deploy.
 
-## Verified baseline
-R2J.4B final CI run `38380986752` succeeded across Linux Go/vet/race and local HTTPS, PostgreSQL tests, Windows native DPAPI and macOS native Keychain, including the restricted staging allowlist/TLS checks. No actual remote-Wi-Fi pilot or public deployment.
+## Verified preceding baseline
+R2J.5 latest final CI `38383543335` SUCCESS for all four jobs: Linux Go/vet/race, PostgreSQL connection leases and signed TLS streaming revocation, Windows DPAPI packages, macOS Keychain packages. No actual Internet pilot or physical devices.
 
 ## This branch
-- Migration `065_agent_connections.sql`: one active per-org/per-agent random session ID and 15s lease, heartbeat freshness, and scoped OPEN/CLOSE audit.
-- `pgpairing.OpenConnection`, `RenewConnection`, `CloseConnection`, `ConnectionOnline`: transactional lease ownership, expiry and reclaims. Renewal checks agent revocation, pairing and organization status before every live heartbeat. No device permissions or commands.
-- `pairapi.POST /v1/agent/session`: a fresh, one-use signed Ed25519 resume proof **on the same TLS request** opens a long-lived NDJSON stream of `connected`, `heartbeat`, `closed` frames; each has `capabilities=NONE`. Existing native-origin, JSON limits and PostgreSQL admission apply.
-- `agentremote.Client.StreamSession`: existing OS-protected signing key and authenticated HTTPS only. Strict stream-frame validation, no redirect, bounded frames, 12s stall watchdog, on-disconnect offline callback.
-- `agentservice.LiveMonitor`: ONLINE derives only from a fresh authenticated frame on a live stream, OFFLINE on stream loss/staleness; bounded reconnect/backoff and cancellation.
-- Native `localreach-agent serve` runs the stream monitor; the read-only loopback status/UI distinguishes genuine ONLINE session from identity-only verification and always reports no discovered/authorized devices.
-- Real PostgreSQL tests cover single-owner lease, another database connection, expiry/reclaim, incorrect session ID, revocation, and a live TLS stream closing after administrator revocation. Local monitor tests cover genuine frame presence, stale/failed state and shutdown.
-- `docs/R2J5_OUTBOUND_SESSIONS.md` documents protocol, timing, operator constraints and readiness blockers.
+- **Bug fix:** `cmd/localreach-control` used HTTP server-global `WriteTimeout:10s`, disconnecting an otherwise healthy long-lived heartbeat stream. It now has no global response write timeout; streaming handler still bounds **each** write with its own 5-second per-frame deadline. Server read/header timeouts and client heartbeat watchdog remain.
+- `internal/pilotacceptance/acceptance_test.go` compiles/launches the actual control-plane executable as a separate OS process, configures ephemeral PEM TLS trust, and uses a separate client with test-only Ed25519 credentials and no database password.
+- Acceptance tests require disposable loopback PostgreSQL and run migration `060`–`065`. The test proves TLS certificate rejection, authenticated connection lasting **more than 12 seconds**, actual heartbeat, server process crash, client disconnect, 15s database lease expiry, server restart with the same agent key, successful reconnect, separately signed revocation cutting the stream, and denied revoked reconnect.
+- CI adds the process-level TLS test after the regular PostgreSQL integration suite, using a compiled control-plane binary. Tests are opt-in by environment; local unit suites skip this intrusive integration if not explicitly configured.
+- `docs/R2J6A_PROCESS_TLS_ACCEPTANCE.md` describes the test and exactly which real two-network requirements remain unverified.
 
 ## Verification
-**R2J.5 implementation CI VERIFIED GREEN**: GitHub Actions run `38383290834` concluded SUCCESS in all four jobs: Linux unit/vet/race + two-process TLS smoke, disposable PostgreSQL session lease + authenticated live HTTPS streaming + revocation integration, Windows DPAPI/full packages, and macOS Keychain/full packages. This verifies code under controlled test conditions, not a real cross-network deployment or hardware operations. A documentation-only update triggers a fresh final-HEAD run.
+**R2J.6A CI VERIFIED GREEN:** GitHub Actions run `38387592837` SUCCESS across Linux Go/vet/race, Windows DPAPI/full packages, macOS Keychain/full packages, and disposable PostgreSQL tests plus the separate-process real-control-plane TLS acceptance. The acceptance test `TestSeparateProcessTLSCrashReclaimRevocation` actually ran and PASSED in 31.41s, proving the >12-second stream, process kill, lease timeout, process restart and separately signed revocation. This is not a two-network pilot. A documentation-only update triggers a subsequent CI run.
 
 ## Important limits
-This is a **read-only persistent presence session**. No printer/attendance device commands, generic reverse proxy, TCP forwarding, terminal, LAN discovery or device capability grants are available. No production public gateway or actual WAN pilot was executed. The restricted staging listener still requires operator-controlled DNS/TLS/source-IP firewall and only supports a tiny maximum of 16 concurrent routed requests. Crash cleanup waits for the 15s lease timeout; status is not security authorization. Signed installers, true user SSO, revocation fanout, multi-region streaming scale, production abuse protection and hardware acceptance remain unfinished.
+This runs separate processes on one CI machine, **not** on different networks. There has been **no** cloud deployment, DNS/certificate provisioning, remote client's public IP firewall test, CGNAT acceptance, external device installation, printer or attendance access. All command/device capabilities remain NONE. Real R2J.6B multi-network pilot requires explicit authorization, approved staging service, and operator-owned TLS/firewall/PostgreSQL environment; not performed. Production SSO, signed installer, scalable gateway, revocation metrics and device capability grants remain unfinished.
 
 ## Next
-CI first. Then R2J.6 real approved cross-network acceptance, R2K explicit capability grants and read-only discovery. Main merge and deployment require explicit approval.
+Verify CI; correct any discovered bugs. Then R2J.6B actual authorized two-network pilot, plus code work toward R2K.1 audited, separately approved per-device permission grants and read-only discovery. Do not deploy/merge or operate hardware without explicit approval.

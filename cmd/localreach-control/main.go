@@ -74,7 +74,9 @@ func serveConfigured(ctx context.Context,certFile,keyFile,dsn string,allowLocalT
  server:=&http.Server{
   Handler:routed,
   ReadHeaderTimeout:5*time.Second,ReadTimeout:10*time.Second,
-  WriteTimeout:10*time.Second,IdleTimeout:20*time.Second,
+  // A global WriteTimeout terminates authenticated streams after 10s.
+  // R2J.5 uses explicit per-frame deadlines instead.
+  WriteTimeout:0,IdleTimeout:20*time.Second,
   MaxHeaderBytes:8192,
  }
  done:=make(chan struct{})
