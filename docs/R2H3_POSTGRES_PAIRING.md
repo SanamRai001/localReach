@@ -53,3 +53,11 @@ This phase is a **transactional prototype with real PostgreSQL tests**, not prod
 ## Next
 
 R2I secure desktop agent identity storage and recovery; subsequent phases integrate authenticated admin login, a real pairing API/UI and separately authorized capabilities. Keep R2H.3 isolated until these gates pass.
+
+## Administrator key login (additional R2H.3 slice)
+
+`migrations/061_admin_sessions_postgres.sql` adds single-use login challenges, five-minute hashed bearer sessions, and login/logout audit events. `internal/pgauth` implements Ed25519 proof of possession for a **previously trusted administrator key**, short-lived single-use challenges, session issuance, role checks on each request against live admin membership and organization status, and logout. Revoking the trusted public key or blocking its organization immediately invalidates authorization for existing sessions. Raw session tokens are returned only once and are **never persisted**.
+
+This is a genuine **cryptographic administrator authentication primitive** against a provisioned tenant admin identity. It is **not** password login, OAuth/SSO, an interactive account provisioning workflow, or integrated browser session/CSRF protection. Session callers must use authenticated TLS with careful credential handling. The old pairing transport is not yet using these sessions; signing an approval remains a separate operation. The backend exposes **no HTTP login endpoints** and cannot be deployed publicly in this state.
+
+PostgreSQL CI additionally runs `internal/pgauth` tests for wrong-key proof denial, challenge reuse, token role scope, live role updates, revocation, restart persistence, logout, expiration and blocked organizations.
