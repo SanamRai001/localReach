@@ -1,27 +1,32 @@
 # Project state
 
 **Date:** 2026-10-13
-**Product:** LocalReach — outbound-only, strictly authorized access to narrow LAN device capabilities.
-**Branch:** `feat/r2j4-admin-approval-distributed-admission`
-**Phase:** R2J.4A — native administrator workflow plus shared PostgreSQL admission.
-**Base:** `feat/r2j3-invitation-control-plane` (PR #31). Prior 31 PRs remain open and stacked; main unchanged, no deployment.
+**Goal:** Simple outbound-only setup for narrowly authorized LAN devices, without device-side router changes.
+**Branch:** `feat/r2j4b-restricted-staging-gateway`
+**Phase:** R2J.4B — explicit operator-controlled source-allowlisted HTTPS staging ingress.
+**Base:** `feat/r2j4-admin-approval-distributed-admission` (PR #32). PRs #1–#32 remain open and stacked, no main merge/deploy.
 
-## Last verified baseline
-R2J.3 latest CI run `38377092425` SUCCESS for all four Linux/PostgreSQL/Windows/macOS jobs: signed admin login, one-time invitation, fingerprint review, separate signed approval, native identity enrollment, OS-secured signing, and loopback TLS tests.
+## Verified foundation
 
-## R2J.4A implementation
-- `internal/adminremote` native-only administrator TLS client: preprovisioned key signs login challenge, administrator can issue one-time invitation and read non-secret fingerprint review, and approve only after a provided full fingerprint is checked again against the server and a separately signed short-lived decision is accepted.
-- `cmd/localreach-admin`: explicit separately scoped OS-native administrator signing key directory, `init`, `invite`, `review`, `approve`. Approve prompts for an exact out-of-band fingerprint confirmation. No browser private keys, password, or automatic provisioning.
-- `migrations/064_shared_admission.sql` and `internal/pairapi.SQLAdmission`: PostgreSQL-backed transactional per-peer/route fixed-window five-per-minute admission across server processes, fail-closed on DB errors. Does not trust forwarded headers.
-- `cmd/localreach-control` now configures database-backed admission for **all** native API paths, not just login/invitation. It remains fixed to loopback 127.0.0.1:19443 with TLS and explicit DB configuration.
-- Added native CLI tests, shared admission PostgreSQL tests, administrator signed-login/invite/fingerprint approval integration, and three-OS binary compilation.
-- `docs/R2J4A_ADMIN_AND_ADMISSION.md` describes manual operation and remaining release blockers.
+R2J.4A final CI run `38379094549` succeeded in all four Linux unit/vet/race/mock TLS, PostgreSQL authorization/shared admission, Windows DPAPI, and macOS Keychain jobs. The operator native administrator key remains separate, with invitation issuance, fingerprint review, independently signed approval and PostgreSQL-backed per-route admission.
+
+## R2J.4B implemented
+
+- `internal/staginggate`: an explicitly enabled direct-TLS ingress guard for a **restricted cross-network staging pilot**, accepting only configured IP listener/DNS name and narrow source CIDRs (max 16, IPv4 /24 or narrower, IPv6 /64 or narrower).
+- Rejects blocked direct peers at the socket accept stage before TLS handshake, and again per HTTP request; ignores untrusted `X-Forwarded-For`.
+- Validates leaf certificate SAN, valid date and server-auth purpose against DNS identity before binding, and enforces TLS 1.3 minimum, exact SNI/Host and max 16 concurrent application requests.
+- `cmd/localreach-control` defaults to localhost, but can accept `-enable-restricted-staging` with explicit staging listener, hostname and CIDRs. It rejects missing/unsafe input and rejects the disposable plaintext PostgreSQL option in staging mode. TLS and PostgreSQL verification remain required.
+- Tests cover unsafe ranges/config, spoofing, TLS/SNI/Host, certificate mismatch/expiry, concurrency exhaustion and allowed socket peers, plus CLI fail-closed stage flags.
+- `docs/R2J4B_RESTRICTED_STAGING.md` documents operator prerequisites, warnings, test plan and why network availability does not mean a cloud command session.
 
 ## Verification
-**R2J.4A CI VERIFIED GREEN:** GitHub Actions run `38378897953` concluded SUCCESS across all four jobs: Linux Go unit/vet/race + mock TLS smoke, real PostgreSQL cross-process admission/native administrator login/invite/fingerprint approval and existing pairing suites, Windows DPAPI/full package/admin CLI build, and macOS Keychain/full package/admin CLI build. A documentation-only follow-up triggers a separate final-head CI run. These tests do not verify a deployed gateway or real remote network.
 
-## Security boundaries and blockers
-Shared admission is a prototype, NOT an Internet-ready distributed WAF. No trusted reverse proxy/client IP policy, bounded purge/monitoring, authoritative human SSO or admin key provisioning UI, secure key rotation, signed installer or native background agent, actual public gateway, outbound persistent command session, device grants/discovery or hardware usage. Loopback prototype cannot serve a remote agent. No printer, attendance, arbitrary tunnel, shell or TCP-forward features.
+**R2J.4B IMPLEMENTATION CI VERIFIED GREEN:** GitHub Actions run `38380788295` concluded SUCCESS across all four jobs: Linux Go/vet/race/TLS smoke and staging guard tests, real PostgreSQL pairing/admission integration, Windows DPAPI/full packages, and macOS Keychain/full packages. Restricted TLS CIDR/certificate/SNI/Host/concurrency negative tests passed. This verifies code and automated test behavior, NOT actual DNS, remote Wi-Fi reachability, authorized cloud deployment or WAN staging acceptance. A subsequent documentation-only update triggers a fresh CI run.
+
+## Explicit limitations
+
+Source-allowlisted staging is **not** a publicly hardened Internet production deployment. DNS, TLS certificate installation, static ingress peer IP, firewall, host lifecycle, secure environment secrets, SSO/provisioning, monitoring, IP/certificate rotation, retention, rollback and real WAN pilot remain operator tasks. No persistent cloud session or truthful ONLINE signal, signed end-user installers, capability grants, discovery or printer/attendance actions. Identity verification remains `connection=OFFLINE`, `capabilities=NONE`.
 
 ## Next
-Pass CI and fix findings. Then R2J.4B reviewed human admin identity + secure, externally reachable staging control-plane with comprehensive abuse defenses; R2K separately approved device grants. Do not deploy or merge without explicit user instruction.
+
+CI and security findings first. Then R2J.4C real authorized two-network acceptance, R2J.5 authenticated outbound long-lived session and revocation, and R2K narrow separately authorized device capabilities. No merges or public deployments unless explicitly approved.
