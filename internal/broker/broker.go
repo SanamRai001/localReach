@@ -12,6 +12,7 @@ import (
  "os"
  "path/filepath"
  "sync"
+ "github.com/SanamRai001/localReach/internal/ownership"
  "time"
 )
 type State string
@@ -38,6 +39,7 @@ type Command struct{
 type Broker struct{
  mu sync.Mutex
  file *os.File
+ owner *ownership.Lock
  jobs map[string]Command
  now func()time.Time
  limit int64
@@ -46,19 +48,20 @@ func Open(path string,limit int64,now func()time.Time)(*Broker,error){
  if limit<1024{return nil,errors.New("capacity too small")}
  if now==nil{now=time.Now}
  if e:=os.MkdirAll(filepath.Dir(path),0700);e!=nil{return nil,e}
- f,e:=os.OpenFile(path,os.O_RDWR|os.O_CREATE,0600);if e!=nil{return nil,e}
- b:=&Broker{file:f,jobs:map[string]Command{},now:now,limit:limit}
+ owner,e:=ownership.Acquire(path);if e!=nil{return nil,e}
+ f,e:=os.OpenFile(path,os.O_RDWR|os.O_CREATE,0600);if e!=nil{owner.Release();return nil,e}
+ b:=&Broker{file:f,owner:owner,jobs:map[string]Command{},now:now,limit:limit}
  reader:=bufio.NewReader(f)
  for{
   line,err:=reader.ReadBytes('\n')
   if err==io.EOF&&len(line)==0{break}
-  if err!=nil{f.Close();return nil,errors.New("incomplete broker journal")}
+  if err!=nil{f.Close();owner.Release();return nil,errors.New("incomplete broker journal")}
   var c Command
-  if json.Unmarshal(line,&c)!=nil||c.ID==""||c.Tenant==""||c.Agent==""||c.Operation!="mock.ping"{f.Close();return nil,errors.New("invalid broker journal")}
-  if prev,ok:=b.jobs[c.ID];ok&&(prev.Tenant!=c.Tenant||prev.Agent!=c.Agent||prev.Operation!=c.Operation){f.Close();return nil,errors.New("mutated journal scope")}
+  if json.Unmarshal(line,&c)!=nil||c.ID==""||c.Tenant==""||c.Agent==""||c.Operation!="mock.ping"{f.Close();owner.Release();return nil,errors.New("invalid broker journal")}
+  if prev,ok:=b.jobs[c.ID];ok&&(prev.Tenant!=c.Tenant||prev.Agent!=c.Agent||prev.Operation!=c.Operation){f.Close();owner.Release();return nil,errors.New("mutated journal scope")}
   b.jobs[c.ID]=c
  }
- if _,e=f.Seek(0,io.SeekEnd);e!=nil{f.Close();return nil,e}
+ if _,e=f.Seek(0,io.SeekEnd);e!=nil{f.Close();owner.Release();return nil,e}
  return b,nil
 }
 func(b *Broker)persist(c Command)error{
@@ -146,4 +149,4 @@ func(b *Broker)Get(id,tenant string)(Command,bool){
  if !ok||c.Tenant!=tenant{return Command{},false}
  return c,true
 }
-func(b *Broker)Close()error{b.mu.Lock();defer b.mu.Unlock();return b.file.Close()}
+func(b *Broker)Close()error{b.mu.Lock();defer b.mu.Unlock();if err:=b.file.Close();err!=nil{return err};return b.owner.Release()}
