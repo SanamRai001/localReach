@@ -1,29 +1,24 @@
 # Project state
 
 **Date:** 2026-10-13
-**Goal:** Secure one-install, one-click connectivity for LAN-only device capabilities.
-**Active branch:** `feat/r1d-durable-command-journal`
-**Phase:** R1D edge command journal prototype; implementation committed, pending verification.
-**Base:** `feat/r1c2-tls-gateway-spike` (PR #5), based on PRs #1–#4. Main unchanged beyond initial README.
+**Project goal:** One-install, low-friction, securely scoped LAN-device capabilities.
+**Current branch:** `feat/r1e-mock-integration`
+**Phase:** R1E local authenticated mock integration authored; acceptance deferred.
+
+## Baseline and branches
+`main` contains the starter README only. Pending dependent PRs: #1 docs, #2 R1A localhost relay, #3 R1B identity, #4 R1C sessions, #5 R1C.2 TLS handler, #6 R1D journal; this branch is based on `feat/r1d-durable-command-journal`. Nothing merged or deployed.
 
 ## Changes
-- R0 documented product, architecture, UX, security and roadmap.
-- R1A localhost mock agent/relay.
-- R1B Ed25519 invitation enrollment; R1C signed session challenges and isolated TLS-only handler.
-- R1D new `internal/journal`: bounded fsynced append-only command events, duplicate-ID rejection, explicit state transitions, startup recovery marking interrupted EXECUTING as INDETERMINATE, corruption fails closed.
-- Added tests for restart recovery, invalid transition, journal corruption and capacity, and design/limitation guide in `docs/R1D_COMMAND_JOURNAL.md`.
+- R0 documentation covers product, capability-first architecture, UX and research.
+- R1A isolated loopback mock relay; R1B Ed25519 enrollment; R1C signed sessions; R1C.2 TLS-only gateway handshake and heartbeat.
+- R1D bounded fsynced single-writer journal, with interrupted execution quarantined as INDETERMINATE.
+- R1E `internal/integration`: client combines TLS signed handshake, scoped heartbeat and locally executed `mock.ping` protected by the journal. Tests cover TLS success, duplicate ID, crash quarantine, revoked agent, plaintext guard and wrong key. See `docs/R1E_INTEGRATION_BOUNDARY.md`.
 
 ## Verification
-- GitHub writes completed; Go tests, vet and crash injection **not yet run**.
-- User prefers batching verification after implementation milestones.
-- No WAN, physical printer, attendance terminal, installer or browser UX test executed.
+GitHub files created and retrieved in development; **Go tests and vet not executed**. No external network, GUI, installer, hardware or user study validation. User requests batched acceptance checks later; no claim of successful runtime integration.
 
-## Risks
-- Journal is an isolated single-writer spike: no file lock, compaction, encryption, repair path, distributed acknowledgements or production coordination.
-- Disk-full/partial writes fail closed; bounded journal needs deliberate maintenance.
-- Original mock relay remains loopback-only and shares a development token.
-- R1B/R1C identity modules remain unintegrated with R1A command route; no internet-ready security, admin-authenticated enrollment or durable control-plane database.
-- All dependency PRs remain open; no merges or deployment.
+## Risks and constraints
+This is **not remote command delivery**: mock execution originates on the local client, not a cloud broker. No safe internet-exposed listener, transport session channel binding, admin authentication, persistent registries, rate limiting, durable cloud queue or real device adapter. Agent journal assumes a single writer, no OS file lock or compaction, and fail-closed handling for partial writes. R1A development bearer token is loopback-only. Do not expose these prototypes to the internet.
 
 ## Next phase
-Define typed capability manifests and safe retry classes; durable cloud-side command protocol and mock-only end-to-end integration with identity/TLS. Before any public exposure or hardware use, implement OS-key storage, admin authorization, session channel binding, rate limiting and recoverable journal operations. Maintain user-facing one-click UX as the governing acceptance criterion.
+Design a small durable mock command broker with separate accepted/delivered/executed states, command lease expiry and reconciliation; only then connect an outbound agent channel. Preserve typed allowlisted capabilities and crash-safe semantics. Before public connectivity, finish tenant/app auth, channel-bound identity, key storage, replay controls, rate limiting and security tests. R2 remains the one-click UX/installer milestone.
