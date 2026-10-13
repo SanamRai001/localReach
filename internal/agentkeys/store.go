@@ -56,7 +56,7 @@ func(i *Identity)SignMessage(message []byte)([]byte,error){
 }
 // vaultBackend is deliberately unexported: UI/application code cannot pass
 // arbitrary external providers. Tests inject an isolated in-memory vault.
-type vaultBackend interface{Put(string,[]byte)error;Get(string)([]byte,error)}
+type vaultBackend interface{Ready()error;Put(string,[]byte)error;Get(string)([]byte,error)}
 type Store struct{Dir string;vault vaultBackend}
 func(s Store)directory()error{
  if s.Dir==""{return ErrUnsupported}
