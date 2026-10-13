@@ -20,6 +20,7 @@ import (
 
  "github.com/SanamRai001/localReach/internal/adminremote"
  "github.com/SanamRai001/localReach/internal/agentkeys"
+ "github.com/SanamRai001/localReach/internal/pgcapability"
 )
 func trustedClient()*http.Client{
  return &http.Client{
@@ -33,9 +34,9 @@ func trustedClient()*http.Client{
  }
 }
 func run(ctx context.Context,args []string,input io.Reader,out io.Writer)error{
- if len(args)==0{return errors.New("required command: init, invite, review or approve")}
+ if len(args)==0{return errors.New("required command: init, invite, review, approve, grant-read or revoke-read")}
  command:=args[0]
- switch command{case "init","invite","review","approve":default:return errors.New("invalid administrator command")}
+ switch command{case "init","invite","review","approve","grant-read","revoke-read":default:return errors.New("invalid administrator command")}
  fs:=flag.NewFlagSet(command,flag.ContinueOnError)
  dir:=fs.String("identity-dir","","separate native administrator key directory (required)")
  gateway:=fs.String("gateway","","trusted HTTPS control plane URL")
@@ -43,13 +44,16 @@ func run(ctx context.Context,args []string,input io.Reader,out io.Writer)error{
  admin:=fs.String("admin","","preprovisioned administrator key ID")
  site:=fs.String("site","","approved organization site")
  request:=fs.String("request","","pairing request ID to review/approve")
+ agentID:=fs.String("agent","","enrolled agent ID for discovery policy")
+ device:=fs.String("device-fingerprint","","unverified discovery fingerprint")
+ capability:=fs.String("capability","","PRINTER_DISCOVERY_READ or ATTENDANCE_DISCOVERY_READ")
  if err:=fs.Parse(args[1:]);err!=nil{return err}
  if fs.NArg()!=0{return errors.New("unexpected positional arguments")}
  if *dir==""{return errors.New("an independent -identity-dir is required; do not use the agent identity")}
  defaultDir,err:=agentkeys.DefaultDir()
  if err==nil&&filepath.Clean(*dir)==filepath.Clean(defaultDir){return errors.New("administrator identity must be separate from agent identity")}
  if command=="init"{
-  if *gateway!=""||*org!=""||*admin!=""||*site!=""||*request!=""{return errors.New("init accepts identity-dir only")}
+  if *gateway!=""||*org!=""||*admin!=""||*site!=""||*request!=""||*agentID!=""||*device!=""||*capability!=""{return errors.New("init accepts identity-dir only")}
   identity,err:= (agentkeys.Store{Dir:*dir}).Create()
   if err!=nil{return fmt.Errorf("native administrator key initialization denied: %w",err)}
   fmt.Fprintln(out,"Administrator PUBLIC key (must be provisioned by an existing trusted operator):",base64.RawURLEncoding.EncodeToString(identity.PublicKey()))
@@ -58,8 +62,11 @@ func run(ctx context.Context,args []string,input io.Reader,out io.Writer)error{
   return nil
  }
  if *gateway==""||*org==""||*admin==""{return errors.New("HTTPS gateway, organization and provisioned administrator ID required")}
- if command=="invite"&&(*site==""||*request!=""){return errors.New("invite requires site, not request")}
- if (command=="review"||command=="approve")&&(*request==""||*site!=""){return errors.New("review and approve require request, not site")}
+ if command=="invite"&&(*site==""||*request!=""||*agentID!=""||*device!=""||*capability!=""){return errors.New("invite requires only site")}
+ if (command=="review"||command=="approve")&&(*request==""||*site!=""||*agentID!=""||*device!=""||*capability!=""){return errors.New("review and approve require only request")}
+ if (command=="grant-read"||command=="revoke-read")&&(*request!=""||*site==""||*agentID==""||len(*device)!=64||(*capability!=pgcapability.PrinterDiscovery&&*capability!=pgcapability.AttendanceDiscovery)){
+  return errors.New("read-policy decisions require site, agent, 64-character fingerprint and supported discovery capability")
+ }
  id,err:=(agentkeys.Store{Dir:*dir}).Load()
  if err!=nil{return fmt.Errorf("existing native administrator key required: %w",err)}
  remote,err:=adminremote.New(*gateway,trustedClient())
@@ -67,6 +74,22 @@ func run(ctx context.Context,args []string,input io.Reader,out io.Writer)error{
  token,err:=remote.Login(ctx,*org,*admin,id)
  if err!=nil{return errors.New("administrator identity is not provisioned or signed login denied")}
  switch command{
+ case "grant-read","revoke-read":
+  fmt.Fprintln(out,"WARNING: discovery fingerprints are UNVERIFIED hints, NOT cryptographic hardware identities.")
+  fmt.Fprintln(out,"This decision DOES NOT enable any device commands.")
+  fmt.Fprintln(out,"Type the exact 64-character fingerprint to confirm this separate read-policy decision:")
+  reader:=bufio.NewReader(io.LimitReader(input,256))
+  line,readErr:=reader.ReadString('\n')
+  if readErr!=nil&&readErr!=io.EOF{return errors.New("could not read fingerprint")}
+  if strings.TrimSpace(line)!=*device{return errors.New("fingerprint mismatch: no grant applied")}
+  action:=pgcapability.Grant
+  if command=="revoke-read"{action=pgcapability.Revoke}
+  decision:=pgcapability.Decision{
+   Organization:*org,Site:*site,AgentID:*agentID,AdminID:*admin,
+   DeviceFingerprint:*device,Capability:*capability,Action:action,
+  }
+  if err=remote.DecideDiscoveryRead(ctx,token,decision,id);err!=nil{return errors.New("separate signed discovery policy denied")}
+  fmt.Fprintln(out,"DISCOVERY READ POLICY:",action,"(device operations remain DISABLED)")
  case "invite":
   invitation,err:=remote.Invite(ctx,*org,*site,token)
   if err!=nil{return errors.New("invitation rejected")}
