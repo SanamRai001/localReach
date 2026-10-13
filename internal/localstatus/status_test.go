@@ -1,5 +1,5 @@
 package localstatus
-import("net/http";"net/http/httptest";"strings";"testing")
+import("net/http/httptest";"strings";"testing")
 func TestStatusIsLocalOnlyAndReadOnly(t *testing.T){
  h:=Handler(nil)
  cases:=[]struct{method,path,remote,origin string;want int}{
