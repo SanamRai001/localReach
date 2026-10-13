@@ -12,6 +12,7 @@ import (
  "os"
  "path/filepath"
  "sync"
+ "github.com/SanamRai001/localReach/internal/ownership"
 )
 type State string
 const (
@@ -34,6 +35,7 @@ type Command struct {
 type Journal struct {
  mu sync.Mutex
  file *os.File
+ owner *ownership.Lock
  path string
  entries map[string]Command
  maxBytes int64
@@ -43,26 +45,27 @@ type Journal struct {
 func Open(path string,maxBytes int64)(*Journal,error){
  if maxBytes<1024{return nil,errors.New("invalid journal capacity")}
  if err:=os.MkdirAll(filepath.Dir(path),0700);err!=nil{return nil,err}
- f,err:=os.OpenFile(path,os.O_RDWR|os.O_CREATE,0600);if err!=nil{return nil,err}
- j:=&Journal{file:f,path:path,entries:make(map[string]Command),maxBytes:maxBytes}
+ owner,err:=ownership.Acquire(path);if err!=nil{return nil,err}
+ f,err:=os.OpenFile(path,os.O_RDWR|os.O_CREATE,0600);if err!=nil{owner.Release();return nil,err}
+ j:=&Journal{file:f,owner:owner,path:path,entries:make(map[string]Command),maxBytes:maxBytes}
  reader:=bufio.NewReader(f)
  for {
   line,err:=reader.ReadBytes('\n')
   if err==io.EOF&&len(line)==0{break}
-  if err!=nil{f.Close();return nil,fmt.Errorf("journal truncated or unreadable: %w",err)}
+  if err!=nil{f.Close();owner.Release();return nil,fmt.Errorf("journal truncated or unreadable: %w",err)}
   var event Command
-  if e:=json.Unmarshal(line,&event);e!=nil||event.ID==""||event.Operation==""{f.Close();return nil,errors.New("invalid journal event")}
+  if e:=json.Unmarshal(line,&event);e!=nil||event.ID==""||event.Operation==""{f.Close();owner.Release();return nil,errors.New("invalid journal event")}
   previous,exists:=j.entries[event.ID]
-  if !validTransition(previous,exists,event){f.Close();return nil,fmt.Errorf("invalid journal transition for %s",event.ID)}
+  if !validTransition(previous,exists,event){f.Close();owner.Release();return nil,fmt.Errorf("invalid journal transition for %s",event.ID)}
   j.entries[event.ID]=event
  }
- if _,err=f.Seek(0,io.SeekEnd);err!=nil{f.Close();return nil,err}
+ if _,err=f.Seek(0,io.SeekEnd);err!=nil{f.Close();owner.Release();return nil,err}
  // An interrupted EXECUTING command might have affected real hardware.
  // Never silently requeue it on restart.
  for _,c:=range j.entries{
   if c.State==Executing {
    c.State=Indeterminate
-   if err=j.append(c);err!=nil{f.Close();return nil,err}
+   if err=j.append(c);err!=nil{f.Close();owner.Release();return nil,err}
   }
  }
  return j,nil
@@ -110,4 +113,4 @@ func (j *Journal) Get(id string)(Command,bool){
  j.mu.Lock();defer j.mu.Unlock()
  c,ok:=j.entries[id];return c,ok
 }
-func (j *Journal) Close()error{j.mu.Lock();defer j.mu.Unlock();return j.file.Close()}
+func (j *Journal) Close()error{j.mu.Lock();defer j.mu.Unlock();if err:=j.file.Close();err!=nil{return err};return j.owner.Release()}
