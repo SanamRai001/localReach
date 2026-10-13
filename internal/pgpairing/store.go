@@ -37,7 +37,9 @@ func part(s string)string{return strconv.Itoa(len(s))+":"+s}
 func message(d AdminDecision)[]byte{
  return []byte(adminDomain+part(d.Organization)+part(d.RequestID)+part(d.AdminID)+part(string(d.Action))+part(d.Nonce)+strconv.FormatInt(d.IssuedAt,10)+":"+strconv.FormatInt(d.ExpiresAt,10))
 }
-func SignDecision(priv ed25519.PrivateKey,d AdminDecision)[]byte{return ed25519.Sign(priv,message(d))}
+// DecisionMessage is the canonical tenant/key/request-scoped admin decision.
+func DecisionMessage(d AdminDecision)[]byte{return message(d)}
+func SignDecision(priv ed25519.PrivateKey,d AdminDecision)[]byte{return ed25519.Sign(priv,DecisionMessage(d))}
 // EnrollmentMessage is the exact domain-separated server-verifiable proof.
 // Native signers should sign these bytes, never an arbitrary remote message.
 func EnrollmentMessage(org,id,nonce string)[]byte{
