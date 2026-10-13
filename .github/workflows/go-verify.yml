@@ -25,6 +25,8 @@ jobs:
         run: go test -race -count=1 ./...
       - name: Compile lab
         run: go build -o /tmp/localreach-lab ./cmd/localreach-lab
+      - name: Compile native diagnostic agent
+        run: go build -o /tmp/localreach-agent ./cmd/localreach-agent
       - name: Verify separate processes over TLS
         run: bash scripts/verify-two-process.sh
 
@@ -69,6 +71,8 @@ jobs:
         run: go test -race -count=1 -v ./internal/agentkeys
       - name: Compile all Windows packages
         run: go test -count=1 ./...
+      - name: Compile Windows diagnostic agent
+        run: go build -o localreach-agent.exe ./cmd/localreach-agent
 
   macos-agent-key-storage:
     runs-on: macos-latest
@@ -85,6 +89,8 @@ jobs:
         run: go test -race -count=1 -v ./internal/agentkeys
       - name: Compile all macOS packages
         run: go test -count=1 ./...
+      - name: Compile macOS diagnostic agent
+        run: go build -o /tmp/localreach-agent ./cmd/localreach-agent
       - name: Verify CGo-disabled keychain path fails closed
         env:
           CGO_ENABLED: '0'
